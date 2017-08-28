@@ -1,0 +1,13 @@
+.DS_Store
+*.log
+node_modules
+dist
+lib
+es
+coverage
+/test/**/dist
+
+# tnpm cache directory
+/test/**/.cache
+
+

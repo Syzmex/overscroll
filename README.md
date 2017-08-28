@@ -1,1 +1,1 @@
-# overscrolljs
+# overscroll.js

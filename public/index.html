@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="zh-Hans-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="renderer" content="webkit">
+  <meta name="force-rendering" content="webkit">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
+  <meta name="viewport" content="width=device-width,initial-scale=1.0,minimum-scale=1.0">
+  <title></title>
+  <style>
+    html, body, #root {
+      height: 100%;
+      overflow: hidden;
+    }
+    body {
+      margin: 0;
+    }
+    .led {
+      position: fixed;
+      left: 0;
+      top: 0;
+    }
+    .box {
+      background-color: rgba(0, 0, 0, 0.1);
+      margin: 20px auto;
+      width: 88%;
+      height: 50px;
+    }
+    .fl {
+      float: left;
+    }
+    .ib {
+      display: inline-block;
+    }
+    .ofh {
+      overflow: hidden;
+    }
+    .ofa {
+      overflow: auto;
+    }
+    .border {
+      border: 1px solid rgba(0, 0, 0, 0.3);
+    }
+    .pt1 {
+      padding-top: 1px;
+    }
+    .pb1 {
+      padding-bottom: 1px;
+    }
+    .psa {
+      position: absolute;
+    }
+    .psr {
+      position: relative;
+    }
+    .txtc {
+      text-align: center;
+    }
+    .stage:before{
+      height: 0;
+      content: ".";
+      display: block;
+      visibility: hidden;
+    }
+    .stage:after{
+      height: 0;
+      content: ".";
+      display: block;
+      visibility: hidden;
+    }
+    .stage {
+      width: 100%;
+      height: 100%;
+    }
+    h1 {
+      text-align: center;
+    }
+  </style>
+</head>
+<body>
+  <div class="led" id="led"></div>
+  <div id="root">
+    <div class="stage" style="background-color:#7ec2f3">
+      <h1>舞台一</h1>
+    </div>
+    <div class="stage" style="background-color:#f78e3d">
+      <h1>舞台二</h1>
+    </div>
+    <div class="stage" style="background-color:#ffce3d">
+      <h1>舞台三</h1>
+    </div>
+    <div class="stage" style="background-color:#3db8c1">
+      <h1>舞台四</h1>
+    </div>
+    <div class="stage" style="background-color:#d9d9d9">
+      <h1>舞台五</h1>
+    </div>
+  </div>
+</body>
+</html>

@@ -1,10 +1,10 @@
 {
-  "name": "whatitis",
-  "version": "1.1.1",
-  "description": "Type checker",
-  "repository": "https://github.com/Syzmex/whatitis.git",
+  "name": "overscrolljs",
+  "version": "0.0.1",
+  "description": "browser scroll bar",
+  "repository": "https://github.com/Syzmex/overscrolljs.git",
   "keywords": [
-    "whatitis"
+    "overscrolljs"
   ],
   "main": "lib/index.js",
   "module": "es/index.js",
@@ -14,7 +14,7 @@
   ],
   "license": "MIT",
   "bugs": {
-    "url": "https://github.com/Syzmex/whatitis/issues"
+    "url": "https://github.com/Syzmex/overscrolljs/issues"
   },
   "files": [
     "dist",
@@ -23,6 +23,7 @@
     "src"
   ],
   "scripts": {
+    "start": "kiwiai server",
     "clean": "rimraf lib dist es coverage",
     "test": "cross-env BABEL_ENV=commonjs jest",
     "test:watch": "npm test -- --watch",
@@ -30,16 +31,17 @@
     "build": "npm run clean && npm run build:commonjs && npm run build:es && npm run build:umd && npm run build:umd:min",
     "build:es": "cross-env BABEL_ENV=es babel src --out-dir es",
     "build:commonjs": "cross-env BABEL_ENV=commonjs babel src --out-dir lib",
-    "build:umd": "cross-env BABEL_ENV=es NODE_ENV=development rollup -c -f umd -o dist/whatitis.js",
-    "build:umd:min": "cross-env BABEL_ENV=es NODE_ENV=production rollup -c -f umd -o dist/whatitis.min.js",
+    "build:umd": "cross-env BABEL_ENV=es NODE_ENV=development rollup -c -f umd -o dist/overscrolljs.js",
+    "build:umd:min": "cross-env BABEL_ENV=es NODE_ENV=production rollup -c -f umd -o dist/overscrolljs.min.js",
     "prepare": "npm run clean && npm run lint && npm test && npm run build",
-    "lint": "eslint --ext .js src test build",
+    "lint": "eslint --ext .js src test",
     "precommit": "npm run lint"
   },
   "dependencies": {
-    "is-plain-object": "^2.0.1",
-    "isobject": "^3.0.0",
-    "kind-of": "^3.1.0"
+    "hammerjs": "^2.0.8",
+    "invariant": "^2.2.2",
+    "performance-now": "^2.1.0",
+    "whatitis": "^1.1.1"
   },
   "devDependencies": {
     "babel-cli": "^6.26.0",
@@ -54,13 +56,14 @@
     "cross-env": "^5.0.5",
     "eslint": "^3.19.0",
     "eslint-config-airbnb": "^15.1.0",
-    "eslint-config-promise": "^1.1.5",
+    "eslint-config-promise": "^1.1.8",
     "eslint-plugin-flowtype": "^2.30.4",
     "eslint-plugin-import": "^2.3.0",
     "eslint-plugin-jsx-a11y": "^5.1.1",
     "eslint-plugin-react": "^7.1.0",
     "jest": "^20.0.4",
     "jsdom": "^11.1.0",
+    "kiwiai": "^0.2.32",
     "rimraf": "^2.6.1",
     "rollup": "^0.48.2",
     "rollup-plugin-babel": "^3.0.2",

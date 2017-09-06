@@ -9,5 +9,3 @@ coverage
 
 # tnpm cache directory
 /test/**/.cache
-
-

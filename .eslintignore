@@ -1,5 +1,4 @@
-**/dist/**
-**/es/**
-**/lib/**
-**/node_modules/**
-**/flow-typed/**
+dist/*
+es/*
+lib/*
+flow-typed/*

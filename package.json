@@ -1,10 +1,10 @@
 {
-  "name": "overscrolljs",
+  "name": "overscroll",
   "version": "0.0.2",
   "description": "browser scroll bar",
-  "repository": "https://github.com/Syzmex/overscrolljs.git",
+  "repository": "https://github.com/Syzmex/overscroll.git",
   "keywords": [
-    "overscrolljs"
+    "overscroll"
   ],
   "main": "lib/index.js",
   "module": "es/index.js",
@@ -14,7 +14,7 @@
   ],
   "license": "MIT",
   "bugs": {
-    "url": "https://github.com/Syzmex/overscrolljs/issues"
+    "url": "https://github.com/Syzmex/overscroll/issues"
   },
   "files": [
     "dist",
@@ -31,8 +31,8 @@
     "build": "npm run clean && npm run build:commonjs && npm run build:es && npm run build:umd && npm run build:umd:min",
     "build:es": "cross-env BABEL_ENV=es babel src --out-dir es",
     "build:commonjs": "cross-env BABEL_ENV=commonjs babel src --out-dir lib",
-    "build:umd": "cross-env BABEL_ENV=es NODE_ENV=development rollup -c -f umd -o dist/overscrolljs.js",
-    "build:umd:min": "cross-env BABEL_ENV=es NODE_ENV=production rollup -c -f umd -o dist/overscrolljs.min.js",
+    "build:umd": "cross-env BABEL_ENV=es NODE_ENV=development rollup -c -f umd -o dist/overscroll.js",
+    "build:umd:min": "cross-env BABEL_ENV=es NODE_ENV=production rollup -c -f umd -o dist/overscroll.min.js",
     "prepare": "npm run clean && npm run lint && npm test && npm run build",
     "lint": "eslint --ext .js src test",
     "precommit": "npm run lint"

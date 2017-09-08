@@ -375,7 +375,7 @@ function OverScroll( options ) {
         scrollTop = overscroll.scrollTop;
       } else if ( type === 'panend' ) {
         reset( options );
-        poss = getPoss( options );console.log(poss)
+        poss = getPoss( options );
         const { clientHeight } = overscroll;
         scrollLeft = overscroll.scrollLeft;
         scrollTop = overscroll.scrollTop;

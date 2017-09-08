@@ -1,4 +1,7 @@
 
+import is from 'whatitis';
+
+
 const PIXEL_PATTERN = /margin|padding|width|height|max|min|offset/;
 
 const removePixel = {
@@ -51,10 +54,15 @@ export function set( node, name, value ) {
     node.style[name] = value; // Number
     return value;
   }
-  for ( const x in name ) {
-    if ( name.hasOwnProperty( x )) {
-      set( node, x, name[x]);
-    }
+  if ( is.PlainObject( name )) {
+    Object.entries( name ).forEach(([ key, value ]) => {
+      set( node, key, value );
+    });
   }
+  // for ( const x in name ) {
+  //   if ( name.hasOwnProperty( x )) {
+  //     set( node, x, name[x]);
+  //   }
+  // }
   return getComputedStyle( node );
 }

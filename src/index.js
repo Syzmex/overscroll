@@ -1,79 +1,19 @@
 
 import is from 'whatitis';
 import Hammer from 'hammerjs';
-import { get, set } from './utils/css';
+import { set } from './utils/css';
 import browser from './utils/browser';
 import compose from './utils/compose';
 import domUtils from './utils/dom';
-// import { hasScroll, hasScrollX, hasScrollY } from './utils/hasScrollBar';
+import scope from './utils/scope';
+import hasScrollBar from './utils/hasScrollBar';
 import addEventListener from './utils/dom/addDomEventListener';
 import { requestAnimFrame } from './utils/requestAnimationFrame';
 
-const X = 'x';
-const Y = 'y';
-const XY = 'xy';
-const xreg = /x/i;
-const yreg = /y/i;
-const OVERSCROLLJS = 'overscrolljs';
-
-function hasX( axis ) {
-  return xreg.test( axis );
-}
-
-function hasY( axis ) {
-  return yreg.test( axis );
-}
-
-function hasXY( axis ) {
-  return hasX( axis ) && hasY( axis );
-}
-
-function getAxis( axis ) {
-  if ( hasXY( axis )) {
-    return XY;
-  } else if ( hasX( axis )) {
-    return X;
-  }
-  return Y;
-}
-
-function getDocument( dom ) {
-  return is.Element( dom ) ? dom.ownerDocument : document;
-}
-
-function getWindow( dom ) {
-  const doc = is.Document( dom ) ? dom : getDocument( dom );
-  return doc.defaultView || window;
-}
-
-const getScrollByAxis = ({ axis, win, html, body, isPageScroll }) => ( target ) => {
-  // CSS1Compat 标准模式 BackCompat 混杂模式
-  // const isCSS1Compat = doc.compatMode === 'CSS1Compat';
-  const scrollX = () => {
-    return !isPageScroll ? target.scrollLeft : is.Defined( win.pageXOffset ) ? win.pageXOffset
-      : Math.max( html.scrollLeft, body.scrollLeft );
-  };
-  const scrollY = () => {
-    return !isPageScroll ? target.scrollTop : is.Defined( win.pageYOffset ) ? win.pageYOffset
-      : Math.max( html.scrollTop, body.scrollTop );
-  };
-  if ( hasXY( axis )) {
-    return {
-      top: scrollX(),
-      left: scrollY()
-    };
-  } else if ( hasX( axis )) {
-    return {
-      top: 0,
-      left: scrollX()
-    };
-  }
-  return {
-    top: scrollY(),
-    left: 0
-  };
-};
-
+const {
+  X, Y, XY, xreg, yreg, OVERSCROLLJS, hasX, hasY, hasXY, getAxis, getDocument, // eslint-disable-line
+  getWindow, getScrollByAxis // eslint-disable-line
+} = scope;
 
 const defaultOptions = {
   axis: XY,
@@ -195,21 +135,37 @@ function getOptions({
 }
 
 
+function sign( number ) {
+  return number > 0 ? 1 : -1;
+}
+
+function toFixed( number, digit ) {
+  return Math.round( number * ( 10 ** digit )) / ( 10 ** digit );
+}
+
+function handleDestory( options ) {
+  options.destroy = null;
+  return function( callback ) {
+    options.destroy = options.destroy ? compose( options.destroy, callback ) : callback;
+  };
+}
+
 function OverScroll( options ) {
 
   const overscroll = {
     scrollTop: 0,
     scrollLeft: 0,
     scrollHeight: 0,
-    scrollWidth: 0
+    scrollWidth: 0,
+    destroy: null
   };
-  const { win, html, mode, isPageScroll } = options;
+  const onDestroy = handleDestory( options );
+
+  const { win, mode, isPageScroll } = options;
+  const { /* hasScroll, hasScrollX, */hasScrollY } = hasScrollBar( options );
   const { getPosition, getClientSize, getScrollSize, getFromRange } = domUtils( options );
   const getScroll = getScrollByAxis( options );
-  const overflow = get( options.target, 'overflow' );
-  if ( overflow !== 'hidden' ) {
-    set( options.target, 'overflow', 'hidden' );
-  }
+  set( options.target, 'overflow', 'hidden' );
 
   function isTop() {
     return overscroll.scrollTop <= 1;
@@ -219,13 +175,13 @@ function OverScroll( options ) {
     return overscroll.scrollTop === overscroll.scrollHeight;
   }
 
-  function isLeft() {
-    return overscroll.scrollLeft <= 1;
-  }
+  // function isLeft() {
+  //   return overscroll.scrollLeft <= 1;
+  // }
 
-  function isRight() {
-    return overscroll.scrollLeft === overscroll.scrollWidth;
-  }
+  // function isRight() {
+  //   return overscroll.scrollLeft === overscroll.scrollWidth;
+  // }
 
   function setScroll(
     scrollLeft = overscroll.scrollLeft,
@@ -241,36 +197,42 @@ function OverScroll( options ) {
     }
   }
 
-  const registerScrollMove = ({ target }) => {
+  function reset({ target }) {
+    const { top, left } = getScroll( target );
+    const { width: scrollWidth, height: scrollHeight } = getScrollSize();
+    const { width: clientWidth, height: clientHeight } = getClientSize();
+    overscroll.scrollTop = top;
+    overscroll.scrollLeft = left;
+    overscroll.scrollWidth = scrollWidth;
+    overscroll.scrollHeight = scrollHeight;
+    overscroll.clientWidth = clientWidth;
+    overscroll.clientHeight = clientHeight;
+  }
+
+  const registerScrollMove = () => {
     let v = 0;
-    const a = ( vAbs ) => 0.5; // acceleration = friction / mass
+    const a = ( v ) => {
+      return v > 30 ? 1.5 : ( 1 - Math.cos( Math.PI * v / 30 )) / 2 * 1.5 * 29 / 30 + 1 / 30;
+    };
     let lastTime = 0;
-    const getVelocity = getFromRange( 6, 50 );
-    requestAnimFrame(( time ) => {
+    const getVelocity = getFromRange( 2, 50 );
+    onDestroy( requestAnimFrame(( time ) => {
       const { scrollLeft, scrollTop } = overscroll;
-      const { top, left } = getScroll( target );
       if ( lastTime === 0 ) {
-        const { width: scrollWidth, height: scrollHeight } = getScrollSize();
-        const { width: clientWidth, height: clientHeight } = getClientSize();
-        overscroll.scrollTop = top;
-        overscroll.scrollLeft = left;
-        overscroll.scrollWidth = scrollWidth;
-        overscroll.scrollHeight = scrollHeight;
-        overscroll.clientWidth = clientWidth;
-        overscroll.clientHeight = clientHeight;
-      } else if ( Math.abs( v ) > 0 ) {
-        v = ( v > 0 ? 1 : -1 ) * Math.max( 0, Math.abs( v ) - a( Math.abs( v )));
-        setScroll( scrollLeft, scrollTop - v );
+        reset( options );
+      } else if ( hasScrollY() && Math.abs( v ) > 0 ) {
+        v = sign( v ) * toFixed( Math.max( 0, Math.abs( v ) - a( Math.abs( v ))), 2 );
+        setScroll( scrollLeft, scrollTop + v );
       }
       lastTime = time;
-    });
+    }).cancel );
     return {
       scrollMove( velocity ) {
         if ( v > 0 !== velocity > 0 ) {
           v = 0;
         }
-        v += ( velocity > 0 ? 1 : -1 ) * getVelocity( Math.abs( velocity ));
-        v = ( velocity > 0 ? 1 : -1 ) * getVelocity( Math.abs( v ));
+        v += sign( velocity ) * getVelocity( Math.abs( velocity ));
+        v = sign( velocity ) * getVelocity( Math.abs( v ));
       },
       scrollStop() {
         v = 0;
@@ -278,35 +240,45 @@ function OverScroll( options ) {
     };
   };
 
-  const registerSectionMove = ({ target }) => {
+  const registerSectionMove = () => {
     let v = 0;
     let d = 0;
-    const esseOut = ( t ) => ( t === 1 ) ? 1 : -( 2 ** ( -10 * t )) + 1;
-    const divisor = ( d, S ) => esseOut((( S - d ) / S )) / 4; // acceleration = friction / mass
-    // let lastTime = 0;
-    // const getVelocity = getFromRange( 6, 50 );
-    requestAnimFrame((/* time */) => {
+    const boundOut = ( t ) => Math.sin( Math.PI * t );
+    const esseOut = ( t ) => {
+      return t < 0.5 ? 1.5 : Math.sin( Math.PI * t ) * 1.5 * 29 / 30 + 1 / 30;
+    };
+    const divisor = ( d, S ) => esseOut((( S - d ) / S ));
+    const bound = ( d, S ) => boundOut((( S - d ) / S ));
+    let rebound = false;
+    onDestroy( requestAnimFrame(() => {
       const { scrollLeft, scrollTop, clientHeight } = overscroll;
-      if ( v !== 0 && d !== 0 ) {
+      if ( hasScrollY() && d !== 0 ) {
         if ( v > 0 !== d > 0 ) {
-          v += ( d > 0 ? 1 : -1 ) * Math.max( 1, Math.abs( d ) * divisor( Math.abs( d ), clientHeight ));
+          rebound = true;
+          v += ( d > 0 ? 1 : -1 ) * Math.max( 0.5, 10 * bound( Math.abs( d ), clientHeight ));
+          d -= v;
+        } else if ( rebound ) {
+          v = ( d > 0 ? 1 : -1 ) * Math.max( 0.5, 30 * bound( Math.abs( d ), clientHeight ));
+          d = ( d > 0 ? 1 : -1 ) * Math.max( Math.abs( d ) - Math.abs( v ), 0 );
         } else {
-          v = ( d > 0 ? 1 : -1 ) * Math.max( 1, Math.abs( d ) * divisor( Math.abs( d ), clientHeight ));
+          v = ( d > 0 ? 1 : -1 ) * Math.max( 0.5, 30 * divisor( Math.abs( d ), clientHeight ));
+          d = ( d > 0 ? 1 : -1 ) * Math.max( Math.abs( d ) - Math.abs( v ), 0 );
         }
-        d = ( d > 0 ? 1 : -1 ) * Math.max( Math.abs( d ) - Math.abs( v ), 0 );console.log(d, v)
         setScroll( scrollLeft, scrollTop + v );
       }
       if ( d === 0 ) {
+        rebound = false;
         v = 0;
       }
-      // lastTime = time;
-    });
+    }).cancel );
     return {
       scrollMove( velocity, distance ) {
+        rebound = false;
         v = velocity;
         d = distance;
       },
       scrollStop() {
+        rebound = false;
         v = 0;
         d = 0;
       }
@@ -329,10 +301,8 @@ function OverScroll( options ) {
 
   function addMouseWheelEvent({ target, html, onScroll }) {
     const eventName = browser.firefox ? 'DOMMouseScroll' : 'mousewheel';
-    const mouseDownEvent = addEventListener( html, 'mousedown', () => {
-      scrollStop();
-    });
-    return addEventListener( isPageScroll ? html : target, eventName, ( event ) => {
+    onDestroy( addEventListener( html, 'mousedown', scrollStop ).remove );
+    onDestroy( addEventListener( isPageScroll ? html : target, eventName, ( event ) => {
       const { deltaY } = event;
       const { top, left } = getScroll( target );
       scrollMove( deltaY );
@@ -345,54 +315,51 @@ function OverScroll( options ) {
       if ( is.Function( onScroll )) {
         onScroll.call( target, top, left, event );
       }
-    });
+    }).remove );
   }
 
-  function addHammerScroll({ target }) {
+  function addHammerScroll({ html, target }) {
     let scrollLeft;
     let scrollTop;
     const mc = new Hammer.Manager( target );
     mc.add( new Hammer.Pan({ direction: Hammer.DIRECTION_ALL, threshold: 0 }));
     mc.on( 'panstart panmove panend', ( event ) => {
+      event.preventDefault();
       const { type, deltaY, pointers } = event;
       if ( type === 'panstart' && pointers.length === 1 ) {
-        const { top, left } = getScroll( target );
-        const { width: scrollWidth, height: scrollHeight } = getScrollSize();
-        const { width: clientWidth, height: clientHeight } = getClientSize();
-        overscroll.scrollTop = top;
-        overscroll.scrollLeft = left;
-        overscroll.scrollWidth = scrollWidth;
-        overscroll.scrollHeight = scrollHeight;
-        overscroll.clientWidth = clientWidth;
-        overscroll.clientHeight = clientHeight;
+        reset( options );
         scrollLeft = overscroll.scrollLeft;
         scrollTop = overscroll.scrollTop;
       } else if ( type === 'panend' ) {
         const { velocityY } = event;
-        if ( Math.abs( velocityY ) > 0.2 && pointers.length === 0 ) {
-          scrollMove( velocityY * 20 );
-        }
-        event.preventDefault();
+        scrollMove( -velocityY * 20 );
       } else if ( deltaY !== 0 ) {
-        if ( pointers.length === 1 ) {
-          setScroll( scrollLeft, scrollTop - deltaY );
-        }
-        event.preventDefault();
+        setScroll( scrollLeft, scrollTop - deltaY );
       }
     });
-    const touchStartEvent = addEventListener( html, 'touchstart', () => {
-      scrollStop();
-    });
-    return touchStartEvent;
+    onDestroy(() => mc.destroy());
+    onDestroy( addEventListener( html, 'touchstart', scrollStop ).remove );
   }
 
   if ( mode === 'scroll' ) {
-    const { scrollMove, scrollStop } = registerScrollMove( options );
+    registerScrollMove( options );
     addHammerScroll( options );
-    const wheelEvent = addMouseWheelEvent( options );
+    addMouseWheelEvent( options );
   }
 
-  function addHammerSection({ target, switchScale }) {
+  function getPoss({ target, anchors }) {
+    const { top: scrollTop } = getScroll( target );
+    return anchors.map( getPosition ).map(({ top }) => top + scrollTop );
+  }
+
+  function initSections({ target, anchors }) {
+    set( target, 'height', '100%' );
+    anchors.forEach(( element ) => {
+      set( element, 'height', '100%' );
+    });
+  }
+
+  function addHammerSection({ html, target, switchScale }) {
     let poss;
     let scrollLeft;
     let scrollTop;
@@ -400,29 +367,16 @@ function OverScroll( options ) {
     const mc = new Hammer.Manager( target );
     mc.add( new Hammer.Pan({ direction: Hammer.DIRECTION_ALL, threshold: 0 }));
     mc.on( 'panstart panmove panend', ( event ) => {
-      const { type, deltaY, pointers } = event;
+      event.preventDefault();
+      const { type, deltaY } = event;
       if ( type === 'panstart' ) {
-        const { top, left } = getScroll( target );
-        const { width: scrollWidth, height: scrollHeight } = getScrollSize();
-        const { width: clientWidth, height: clientHeight } = getClientSize();
-        overscroll.scrollTop = top;
-        overscroll.scrollLeft = left;
-        overscroll.scrollWidth = scrollWidth;
-        overscroll.scrollHeight = scrollHeight;
-        overscroll.clientWidth = clientWidth;
-        overscroll.clientHeight = clientHeight;
+        reset( options );
         scrollLeft = overscroll.scrollLeft;
         scrollTop = overscroll.scrollTop;
       } else if ( type === 'panend' ) {
-        const { top, left } = getScroll( target );
-        const { width: scrollWidth, height: scrollHeight } = getScrollSize();
-        const { width: clientWidth, height: clientHeight } = getClientSize();
-        overscroll.scrollTop = top;
-        overscroll.scrollLeft = left;
-        overscroll.scrollWidth = scrollWidth;
-        overscroll.scrollHeight = scrollHeight;
-        overscroll.clientWidth = clientWidth;
-        overscroll.clientHeight = clientHeight;
+        reset( options );
+        poss = getPoss( options );console.log(poss)
+        const { clientHeight } = overscroll;
         scrollLeft = overscroll.scrollLeft;
         scrollTop = overscroll.scrollTop;
         const { deltaY, velocityY } = event;
@@ -430,19 +384,10 @@ function OverScroll( options ) {
           return top > scrollTop && top < clientHeight + scrollTop ? top : line;
         }, 0 );
         if ( nearest !== 0 ) {
-          console.log( deltaY, velocityY );
-          // if ( deltaY > 0 && nearest - scrollTop > downScale * clientHeight ) {
-          //   console.log(1, scrollTop + clientHeight - nearest)
-          //   scrollMove( velocityY * 20, scrollTop + clientHeight - nearest );
-          // }
-          // if ( deltaY < 0 && nearest - scrollTop < ( 1 - upScale ) * clientHeight ) {
-          //   console.log(3, nearest - scrollTop)
-          //   scrollMove( velocityY * 20, nearest - scrollTop );
-          // }
           // 初速度足够触发上下滑动
-          if ( velocityY > 0 && velocityY > 0.5 ) { // 下滑
+          if ( velocityY > 0.5 ) { // 下滑
             scrollMove( -velocityY * 20, nearest - ( scrollTop + clientHeight ));
-          } else if ( velocityY < 0 && velocityY < -0.5 ) { // 上滑
+          } else if ( velocityY < -0.5 ) { // 上滑
             scrollMove( -velocityY * 20, nearest - scrollTop );
           }
           // 靠近上方
@@ -454,51 +399,31 @@ function OverScroll( options ) {
             scrollMove( -velocityY * 20, nearest - ( scrollTop + clientHeight ));
           }
           // 在中间位置
-          else if ( velocityY > 0 ) {
+          else if ( deltaY > 0 ) {
             scrollMove( -velocityY * 20, nearest - ( scrollTop + clientHeight ));
-          } else if ( velocityY < 0 ) {
+          } else if ( deltaY < 0 ) {
             scrollMove( -velocityY * 20, nearest - scrollTop );
           } else if ( nearest - scrollTop > clientHeight / 2 ) {
-            scrollMove( -0.1 * 20, nearest - ( scrollTop + clientHeight ));
+            scrollMove( 0, nearest - ( scrollTop + clientHeight ));
           } else {
-            scrollMove( 0.1 * 20, nearest - scrollTop );
+            scrollMove( 0, nearest - scrollTop );
           }
         }
-        event.preventDefault();
       } else if ( deltaY !== 0 ) {
-        if ( pointers.length === 1 ) {
-          setScroll( scrollLeft, scrollTop - deltaY );
-        }
-        event.preventDefault();
+        setScroll( scrollLeft, scrollTop - deltaY );
       }
     });
-    const touchStartEvent = addEventListener( html, 'touchstart', () => {
-      scrollStop();
-    });
-    return {
-      touchStartEvent,
-      setPoss( positions ) {
-        poss = [].concat( positions );
-      }
-    };
-  }
-
-  function setSections({ target, anchors }) {
-    set( target, 'height', '100%' );
-    anchors.forEach(( element ) => {
-      set( element, 'height', '100%' );
-    });
-    return anchors.map( getPosition ).map(({ top }) => top );
+    onDestroy(() => mc.destroy());
+    onDestroy( addEventListener( html, 'touchstart', scrollStop ).remove );
   }
 
   if ( mode === 'section' ) {
-    const poss = setSections( options );
-    const { setPoss } = addHammerSection( options );
-    setPoss( poss );
+    initSections( options );
+    addHammerSection( options );
   }
 
   return {
-
+    destroy: overscroll.destroy
   };
 }
 

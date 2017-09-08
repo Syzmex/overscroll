@@ -6,7 +6,7 @@ overscroll({
   target: window.root,
   anchors: Array.prototype.slice.call( window.root.children ),
   onScroll: ( e ) => {
-    console.log( e );
+    // console.log( e );
   }
 });
 // console.log(getScrollBarSzie())

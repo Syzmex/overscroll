@@ -8,7 +8,7 @@ function compose( funcA, funcB ) {
   };
 }
 
-export default ({ body, html }) => {
+export default ({ body, html, target }) => {
 
   function hasScrollX( dom ) {
     return dom.scrollWidth > dom.clientWidth;
@@ -18,8 +18,8 @@ export default ({ body, html }) => {
     return dom.scrollHeight > dom.clientHeight;
   }
 
-  function scrollingElement( dom ) {
-    return dom === body ? html : dom;
+  function scrollingElement() {
+    return target === body ? html : target;
   }
 
   function hasScroll( dom ) {

@@ -1,7 +1,7 @@
 
 import DomEventObject from './EventObject';
 
-export default function addEventListener( target, eventType, callback ) {
+export default function addEventListener( target, eventType, callback, useCapture = false ) {
 
   function wrapCallback( e ) {
     const ne = new DomEventObject( e );
@@ -9,10 +9,10 @@ export default function addEventListener( target, eventType, callback ) {
   }
 
   if ( target.addEventListener ) {
-    target.addEventListener( eventType, wrapCallback, false );
+    target.addEventListener( eventType, wrapCallback, useCapture );
     return {
       remove() {
-        target.removeEventListener( eventType, wrapCallback, false );
+        target.removeEventListener( eventType, wrapCallback, useCapture );
       }
     };
   } else if ( target.attachEvent ) {

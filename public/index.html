@@ -75,6 +75,21 @@
     h1 {
       text-align: center;
     }
+    .scroll {
+      margin: 80px;
+      height: 400px;
+      position: relative;
+      background:-webkit-gradient(linear, 0 0, 0 bottom, from(#ff0000), to(rgba(0, 0, 255, 0.5)));
+    }
+    .scroll:after {
+      content: ".";
+      position: absolute;
+      top: 1000px;
+    }
+    .scroll p {
+      margin: 40px;
+      color: #fff;
+    }
   </style>
 </head>
 <body>
@@ -82,6 +97,23 @@
   <div id="root">
     <div class="stage" style="background-color:#7ec2f3">
       <h1>舞台一</h1>
+      <div id="scrolltest" class="scroll">
+        <p>1</p>
+        <p>1</p>
+        <p>1</p>
+        <p>1</p>
+        <p>1</p>
+        <p>1</p>
+        <p>1</p>
+        <p>1</p>
+        <p>1</p>
+        <p>1</p>
+        <p>1</p>
+        <p>1</p>
+        <p>1</p>
+        <p>1</p>
+        <p>1</p>
+      </div>
     </div>
     <div class="stage" style="background-color:#f78e3d">
       <h1>舞台二</h1>

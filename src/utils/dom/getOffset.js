@@ -12,15 +12,14 @@ export const getOffset = ({ win, body, html }) => ( node ) => {
 };
 
 export const getPosition = ( scope ) => ( node ) => {
-  if ( node.parentNode === scope.body ) {
-    return getOffset( node );
-  }
+  // if ( node.parentNode === scope.body ) {
+  //   return getOffset( scope )( node );
+  // }
 
   const parent = node.parentNode;
   const parentOffset = getOffset( scope )( parent );
   const offset = getOffset( scope )( node );
 
-  // < ie8 不支持 win.pageXOffset, 则使用 html.scrollLeft
   return {
     left: offset.left - parentOffset.left,
     top: offset.top - parentOffset.top

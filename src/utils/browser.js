@@ -1,6 +1,6 @@
 
 export default ( function() {
-  try {
+  if ( navigator && navigator.userAgent ) {
     const userAgent = navigator.userAgent.toLowerCase();
     const toArray = ( some ) => {
       return !Array.isArray( some ) ? [some] : some;
@@ -21,7 +21,6 @@ export default ( function() {
         });
       return env;
     }, {});
-  } catch ( e ) {
-    return {};
   }
+  return {};
 }());

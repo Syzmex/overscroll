@@ -9,4 +9,10 @@ overscroll({
     // console.log( e );
   }
 });
+overscroll({
+  target: window.scrolltest,
+  onScroll: ( e ) => {
+    // console.log( e );
+  }
+});
 // console.log(getScrollBarSzie())

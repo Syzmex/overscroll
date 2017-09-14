@@ -30,14 +30,6 @@ export function getAxis( axis ) {
   return Y;
 }
 
-export function getDocument( dom ) {
-  return is.Element( dom ) ? dom.ownerDocument : document;
-}
-
-export function getWindow( dom ) {
-  const doc = is.Document( dom ) ? dom : getDocument( dom );
-  return doc.defaultView || window;
-}
 
 export const getScrollByAxis = ({ axis, win, html, body, isPageScroll }) => ( target ) => {
   // CSS1Compat 标准模式 BackCompat 混杂模式
@@ -69,6 +61,5 @@ export const getScrollByAxis = ({ axis, win, html, body, isPageScroll }) => ( ta
 
 
 export default {
-  X, Y, XY, xreg, yreg, OVERSCROLLJS, hasX, hasY, hasXY, getAxis, getDocument, // eslint-disable-line
-  getWindow, getScrollByAxis // eslint-disable-line
+  X, Y, XY, xreg, yreg, OVERSCROLLJS, hasX, hasY, hasXY, getAxis, getScrollByAxis
 };

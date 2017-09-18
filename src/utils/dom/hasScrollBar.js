@@ -1,4 +1,7 @@
 
+import { get } from '../css';
+import { hasData } from './domData';
+
 // 实际情况下 body documentElement 不会都设置 overflow: scroll
 // 推荐 html, body { height: 100% } body { overflow: auto; }
 
@@ -8,18 +11,24 @@ function compose( funcA, funcB ) {
   };
 }
 
+const scrollble = ( attr ) => ( dom ) => {
+  return [ 'overlay', 'scroll', 'auto' ].includes( get( dom, attr ));
+};
+
 export default ({ body, html, target }) => {
 
   function hasScrollX( dom ) {
-    return dom.scrollWidth > dom.clientWidth;
+    return dom.scrollWidth > dom.clientWidth &&
+      ( hasData( dom, 'OverScrollX' ) || scrollble( 'overflow-x' )( dom ));
   }
 
   function hasScrollY( dom ) {
-    return dom.scrollHeight > dom.clientHeight;
+    return dom.scrollHeight > dom.clientHeight &&
+      ( hasData( dom, 'OverScrollY' ) || scrollble( 'overflow-y' )( dom ));
   }
 
-  function scrollingElement() {
-    return target === body ? html : target;
+  function scrollingElement( dom = target ) {
+    return dom === body ? html : dom;
   }
 
   function hasScroll( dom ) {

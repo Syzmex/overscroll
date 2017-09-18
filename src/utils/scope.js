@@ -1,27 +1,30 @@
 
 import is from 'whatitis';
+import { getDocument, getWindow } from './dom';
 
 
-export const X = 'x';
-export const Y = 'y';
-export const XY = 'xy';
-export const xreg = /x/i;
-export const yreg = /y/i;
-export const OVERSCROLLJS = 'overscrolljs';
+const X = 'x';
+const Y = 'y';
+const XY = 'xy';
+const xreg = /x/i;
+const yreg = /y/i;
+const OVERSCROLL = 'OverScroll';
+const OVERSCROLLX = 'OverScrollX';
+const OVERSCROLLY = 'OverScrollY';
 
-export function hasX( axis ) {
+function hasX( axis ) {
   return xreg.test( axis );
 }
 
-export function hasY( axis ) {
+function hasY( axis ) {
   return yreg.test( axis );
 }
 
-export function hasXY( axis ) {
+function hasXY( axis ) {
   return hasX( axis ) && hasY( axis );
 }
 
-export function getAxis( axis ) {
+function getAxis( axis = XY ) {
   if ( hasXY( axis )) {
     return XY;
   } else if ( hasX( axis )) {
@@ -31,7 +34,7 @@ export function getAxis( axis ) {
 }
 
 
-export const getScrollByAxis = ({ axis, win, html, body, isPageScroll }) => ( target ) => {
+const getScrollByAxis = ({ target, axis, win, html, body, isPageScroll }) => () => {
   // CSS1Compat 标准模式 BackCompat 混杂模式
   // const isCSS1Compat = doc.compatMode === 'CSS1Compat';
   const scrollX = () => {
@@ -44,8 +47,8 @@ export const getScrollByAxis = ({ axis, win, html, body, isPageScroll }) => ( ta
   };
   if ( hasXY( axis )) {
     return {
-      top: scrollX(),
-      left: scrollY()
+      top: scrollY(),
+      left: scrollX()
     };
   } else if ( hasX( axis )) {
     return {
@@ -60,6 +63,133 @@ export const getScrollByAxis = ({ axis, win, html, body, isPageScroll }) => ( ta
 };
 
 
-export default {
-  X, Y, XY, xreg, yreg, OVERSCROLLJS, hasX, hasY, hasXY, getAxis, getScrollByAxis
+const defaultOptions = {
+  axis: XY,
+  prefix: OVERSCROLL,
+  thumbMiniSize: 20,
+  // show: true,
+  // showX: true,
+  // showY: true,
+  target: null,
+  watchInterval: 100,
+  watch: null,
+  onScroll: null,
+  getContainer: null,
+  isPageScroll: false,
+  mode: 'scroll', // 'section'
+  anchors: null,
+  switchScale: [ 0.2, 0.2 ] // [往上拉的距离比例，往下拉的距离比例]
+};
+
+function getOptions({
+  axis,
+  prefix,
+  // show,
+  // showX,
+  // showY,
+  target,
+  watchInterval,
+  watch,
+  onScroll,
+  // getContainer,
+  mode,
+  anchors,
+  switchScale
+} = {}) {
+
+  const options = Object.assign({}, defaultOptions );
+  const doc = getDocument( target );
+  const win = getWindow( doc );
+  const body = doc.body;
+  const html = doc.documentElement;
+
+  // 滚动容器
+  if ( is.Undefined( target ) || [ html, body ].includes( target )) {
+    options.target = doc.scrollingElement || body;
+    options.isPageScroll = true;
+  }
+
+  // 元素装载容器
+  if ( options.target === html ) {
+    options.container = options.target === html ? body : options.target;
+  } else {
+    options.target = target;
+  }
+
+  // container => containerX containerY
+  // if ( is.Function( getContainer )) {
+  //   const container = getContainer();
+  //   if ( is.Element( container )) {
+  //     options.containerX = container;
+  //     options.containerY = container;
+  //   } else {
+  //     const { x, y, X, Y } = container;
+  //     options.containerX = x || X;
+  //     options.containerY = y || Y || options.containerX;
+  //   }
+  // } else {
+  //   options.containerX = options.container;
+  //   options.containerY = options.containerX;
+  // }
+
+  // 滚动条 计算
+  // axis => scrollX scrollY
+  options.axis = getAxis( axis );
+  options.scrollX = hasX( options.axis );
+  options.scrollY = hasY( options.axis );
+
+  // 滚动条 显示/隐藏
+  // show => showX showY
+  // options.show = show !== false;
+  // options.showX = options.show && showX !== false;
+  // options.showY = options.show && showY !== false;
+
+  // 样式前缀 prefix
+  if ( is.String( prefix )) {
+    options.prefix = prefix;
+  }
+
+  // 事件
+  // onScroll( scrollTop, scrollLeft )
+  if ( is.Function( onScroll )) {
+    options.onScroll = onScroll;
+  }
+
+  if ( is.Function( watch )) {
+    options.watch = watch;
+    if ( is.Number( watchInterval ) && watchInterval > 50 ) {
+      options.watchInterval = watchInterval;
+    }
+  }
+
+  if ( mode === 'section' && is.Array( anchors ) && anchors.every( is.Element )) {
+    options.mode = mode;
+    options.anchors = anchors;
+    if ( is.String( switchScale ) && /^\d*$/.test( switchScale )) {
+      switchScale = [ parseFloat( switchScale ), parseFloat( switchScale ) ];
+    }
+    if ( is.Number( switchScale )) {
+      switchScale = [ switchScale, switchScale ];
+    }
+    if (
+      is.Array( switchScale ) &&
+      anchors.every(( num ) => is.Number( num ) && num <= 1 && num >= 0 )
+    ) {
+      options.switchScale = [].concat( switchScale );
+    }
+  }
+
+  return Object.assign( options, { body, html, doc, win });
+}
+
+export default ( options ) => {
+
+  const scope = {
+    X, Y, XY, xreg, yreg, hasX, hasY, hasXY, OVERSCROLL, OVERSCROLLX, OVERSCROLLY
+  };
+
+  Object.assign( scope, getOptions( options ));
+  Object.assign( scope, { getScroll: getScrollByAxis( scope ) });
+
+  return scope;
 };

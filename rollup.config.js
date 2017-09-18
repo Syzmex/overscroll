@@ -7,7 +7,7 @@ import babel from 'rollup-plugin-babel';
 
 const env = process.env.NODE_ENV;
 const config = {
-  name: 'overscrolljs',
+  name: 'overscroll',
   input: 'src/index.js',
   plugins: [
     nodeResolve({
@@ -32,10 +32,10 @@ if ( env === 'production' ) {
   config.plugins.push(
     uglify({
       compress: {
-        pure_getters: true,
         unsafe: true,
-        unsafe_comps: true,
-        warnings: false
+        warnings: false,
+        pure_getters: true,
+        unsafe_comps: true
       }
     })
   );

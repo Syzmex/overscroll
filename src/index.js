@@ -1,137 +1,13 @@
 
 import is from 'whatitis';
 import Hammer from 'hammerjs';
-import { set } from './utils/css';
+import { set, get } from './utils/css';
 import browser from './utils/browser';
 import compose from './utils/compose';
-import scope from './utils/scope';
-import domUtils, { getDocument, getWindow, getParent } from './utils/dom';
+import getScope from './utils/scope';
+import domUtils, { getParent } from './utils/dom';
 import addEventListener from './utils/dom/addDomEventListener';
 import { requestAnimFrame } from './utils/requestAnimationFrame';
-
-const {
-  // eslint-disable-next-line
-  X, Y, XY, xreg, yreg, OVERSCROLLJS, hasX, hasY, hasXY, getAxis, getScrollByAxis
-} = scope;
-
-const defaultOptions = {
-  axis: XY,
-  prefix: OVERSCROLLJS,
-  thumbMiniSize: 20,
-  show: true,
-  showX: true,
-  showY: true,
-  target: null,
-  watchInterval: 100,
-  watch: null,
-  onScroll: null,
-  getContainer: null,
-  isPageScroll: false,
-  mode: 'scroll', // 'section'
-  anchors: null,
-  switchScale: [ 0.2, 0.2 ] // [往上拉的距离比例，往下拉的距离比例]
-};
-
-function getOptions({
-  axis,
-  prefix,
-  show,
-  showX,
-  showY,
-  target,
-  watchInterval,
-  watch,
-  onScroll,
-  getContainer,
-  mode,
-  anchors,
-  switchScale
-} = {}) {
-
-  const options = Object.assign({}, defaultOptions );
-  const doc = getDocument( target );
-  const win = getWindow( doc );
-  const body = doc.body;
-  const html = doc.documentElement;
-
-  // 滚动容器
-  if ( is.Undefined( target ) || [ html, body ].includes( target )) {
-    options.target = doc.scrollingElement || body;
-    options.isPageScroll = true;
-  }
-
-  // 元素装载容器
-  if ( options.target === html ) {
-    options.container = options.target === html ? body : options.target;
-  } else {
-    options.target = target;
-  }
-
-  // container => containerX containerY
-  if ( is.Function( getContainer )) {
-    const container = getContainer();
-    if ( is.Element( container )) {
-      options.containerX = container;
-      options.containerY = container;
-    } else {
-      const { x, y, X, Y } = container;
-      options.containerX = x || X;
-      options.containerY = y || Y || options.containerX;
-    }
-  } else {
-    options.containerX = options.container;
-    options.containerY = options.containerX;
-  }
-
-  // 滚动条 计算
-  // axis => scrollX scrollY
-  options.axis = getAxis( axis );
-  options.scrollX = hasX( options.axis );
-  options.scrollY = hasY( options.axis );
-
-  // 滚动条 显示/隐藏
-  // show => showX showY
-  options.show = show !== false;
-  options.showX = options.show && showX !== false;
-  options.showY = options.show && showY !== false;
-
-  // 样式前缀 prefix
-  if ( is.String( prefix )) {
-    options.prefix = prefix;
-  }
-
-  // 事件
-  // onScroll( scrollTop, scrollLeft )
-  if ( is.Function( onScroll )) {
-    options.onScroll = onScroll;
-  }
-
-  if ( is.Function( watch )) {
-    options.watch = watch;
-    if ( is.Number( watchInterval ) && watchInterval > 50 ) {
-      options.watchInterval = watchInterval;
-    }
-  }
-
-  if ( mode === 'section' && is.Array( anchors ) && anchors.every( is.Element )) {
-    options.mode = mode;
-    options.anchors = anchors;
-    if ( is.String( switchScale ) && /^\d*$/.test( switchScale )) {
-      switchScale = [ parseFloat( switchScale ), parseFloat( switchScale ) ];
-    }
-    if ( is.Number( switchScale )) {
-      switchScale = [ switchScale, switchScale ];
-    }
-    if (
-      is.Array( switchScale ) &&
-      anchors.every(( num ) => is.Number( num ) && num <= 1 && num >= 0 )
-    ) {
-      options.switchScale = [].concat( switchScale );
-    }
-  }
-
-  return Object.assign( options, { body, html, doc, win });
-}
 
 
 function sign( number ) {
@@ -151,6 +27,9 @@ function handleDestory( options ) {
 
 function OverScroll( options ) {
 
+  const { OVERSCROLL, OVERSCROLLX, OVERSCROLLY, hasX, hasY, getScroll,
+    target, axis, win, mode, isPageScroll } = options;
+
   const overscroll = {
     scrollTop: 0,
     scrollLeft: 0,
@@ -160,20 +39,24 @@ function OverScroll( options ) {
   };
 
   const onDestroy = handleDestory( options );
-  const { target, win, mode, isPageScroll } = options;
   const { domData, getPosition, getClientSize, getScrollSize, getFromRange,
     hasScrollY } = domUtils( options );
   const { setData, hasData, removeData } = domData;
-  const getScroll = getScrollByAxis( options );
   set( target, 'overflow', 'hidden' );
-  setData( target, 'overScroll' );
+  setData( target, OVERSCROLL );
+  if ( hasX( axis )) {
+    setData( target, OVERSCROLLX );
+  }
+  if ( hasY( axis )) {
+    setData( target, OVERSCROLLY );
+  }
 
   function isTop() {
     return overscroll.scrollTop <= 1;
   }
 
   function isBottom() {
-    return overscroll.scrollTop === overscroll.scrollHeight;
+    return overscroll.scrollTop === overscroll.scrollHeight - overscroll.clientHeight;
   }
 
   function isLeft() {
@@ -181,7 +64,7 @@ function OverScroll( options ) {
   }
 
   function isRight() {
-    return overscroll.scrollLeft === overscroll.scrollWidth;
+    return overscroll.scrollLeft === overscroll.scrollWidth - overscroll.clientWidth;
   }
 
   function handleState( states ) {
@@ -223,9 +106,8 @@ function OverScroll( options ) {
     }
   }
 
-  function getNearestTarget( dom ) {
-    return hasData( dom, 'overScroll' )
-      ? dom : getParent( dom, ( parent ) => hasData( parent, 'overScroll' ));
+  function getNearestScrollble( dom ) {
+    return hasScrollY( dom ) ? dom : getParent( dom, hasScrollY );
   }
 
   function setScroll(
@@ -247,8 +129,8 @@ function OverScroll( options ) {
     }
   }
 
-  function reset({ target }) {
-    const { top, left } = getScroll( target );
+  function reset() {
+    const { top, left } = getScroll();
     const { width: scrollWidth, height: scrollHeight } = getScrollSize();
     const { width: clientWidth, height: clientHeight } = getClientSize();
     overscroll.scrollTop = top;
@@ -366,21 +248,24 @@ function OverScroll( options ) {
     onDestroy( addEventListener( target, 'mousedown', scrollStop ).remove );
     onDestroy( addEventListener( isPageScroll ? html : target, eventName, ( event ) => {
       const { deltaY } = event;
-      const { top, left } = getScroll( target );
-      reset({ target });
-      scrollMove( -deltaY );
-      if ( !isPageScroll ) {
-        if ( isTop() && deltaY > 0 ) {
-          // event.stopPropagation();
-        } else if ( isBottom() && deltaY < 0 ) {
-          // event.stopPropagation();
-        } else {
-          event.preventDefault();
-          event.stopPropagation();
+      const { top, left } = getScroll();
+      const scrollble = getNearestScrollble( event.target );
+      if ( scrollble === target ) {
+        reset({ target });
+        scrollMove( -deltaY );
+        if ( !isPageScroll ) {
+          if ( isTop() && deltaY > 0 ) {
+            // event.stopPropagation();
+          } else if ( isBottom() && deltaY < 0 ) {
+            // event.stopPropagation();
+          } else {
+            event.preventDefault();
+            event.stopPropagation();
+          }
         }
-      }
-      if ( is.Function( onScroll )) {
-        onScroll.call( target, top, left, event );
+        if ( is.Function( onScroll )) {
+          onScroll.call( target, top, left, event );
+        }
       }
     }).remove );
   }
@@ -393,7 +278,7 @@ function OverScroll( options ) {
     manager.on( 'panstart panmove panend', ( event ) => {
       event.preventDefault();
       const { type, deltaY } = event;
-      const overscroll = getNearestTarget( event.target );
+      const overscroll = getNearestScrollble( event.target );
       if ( overscroll === target ) {
         if ( type === 'panstart' ) {
           reset( options );
@@ -415,8 +300,8 @@ function OverScroll( options ) {
     addMouseWheelEvent( options );
   }
 
-  function getPoss({ target, anchors }) {
-    const { top: scrollTop } = getScroll( target );
+  function getPoss({ anchors }) {
+    const { top: scrollTop } = getScroll();
     return anchors.map( getPosition ).map(({ top }) => top + scrollTop );
   }
 
@@ -437,7 +322,7 @@ function OverScroll( options ) {
     mc.on( 'panstart panmove panend', ( event ) => {
       event.preventDefault();
       const { type, deltaY } = event;
-      const overscroll = getNearestTarget( event.target );
+      const overscroll = getNearestScrollble( event.target );
       if ( overscroll === target ) {
         if ( type === 'panstart' ) {
           reset( options );
@@ -498,4 +383,4 @@ function OverScroll( options ) {
   };
 }
 
-export default compose( OverScroll, getOptions );
+export default compose( OverScroll, getScope );

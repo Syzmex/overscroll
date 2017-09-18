@@ -1,13 +1,14 @@
 
 import is from 'whatitis';
 import Hammer from 'hammerjs';
-import { set, get } from './utils/css';
+import { set } from './utils/css';
 import browser from './utils/browser';
 import compose from './utils/compose';
-import getScope from './utils/scope';
-import domUtils, { getParent } from './utils/dom';
+import getScope from './scope';
+import { getParent } from './utils/dom';
 import addEventListener from './utils/dom/addDomEventListener';
 import { requestAnimFrame } from './utils/requestAnimationFrame';
+import initOverScroll from './initOverScroll';
 
 
 function sign( number ) {
@@ -18,93 +19,12 @@ function toFixed( number, digit ) {
   return Math.round( number * ( 10 ** digit )) / ( 10 ** digit );
 }
 
-function handleDestory( options ) {
-  options.destroy = null;
-  return function( callback ) {
-    options.destroy = options.destroy ? compose( options.destroy, callback ) : callback;
-  };
-}
+function OverScroll( scope ) {
 
-function OverScroll( options ) {
-
-  const { OVERSCROLL, OVERSCROLLX, OVERSCROLLY, hasX, hasY, getScroll,
-    target, axis, win, mode, isPageScroll } = options;
-
-  const overscroll = {
-    scrollTop: 0,
-    scrollLeft: 0,
-    scrollHeight: 0,
-    scrollWidth: 0,
-    destroy: null
-  };
-
-  const onDestroy = handleDestory( options );
-  const { domData, getPosition, getClientSize, getScrollSize, getFromRange,
-    hasScrollY } = domUtils( options );
-  const { setData, hasData, removeData } = domData;
-  set( target, 'overflow', 'hidden' );
-  setData( target, OVERSCROLL );
-  if ( hasX( axis )) {
-    setData( target, OVERSCROLLX );
-  }
-  if ( hasY( axis )) {
-    setData( target, OVERSCROLLY );
-  }
-
-  function isTop() {
-    return overscroll.scrollTop <= 1;
-  }
-
-  function isBottom() {
-    return overscroll.scrollTop === overscroll.scrollHeight - overscroll.clientHeight;
-  }
-
-  function isLeft() {
-    return overscroll.scrollLeft <= 1;
-  }
-
-  function isRight() {
-    return overscroll.scrollLeft === overscroll.scrollWidth - overscroll.clientWidth;
-  }
-
-  function handleState( states ) {
-    return function( target, state = '' ) {
-      if ( !hasData( target, state )) {
-        states.filter(
-          ( elemState ) => state !== elemState && hasData( target, elemState )
-        ).forEach(( state ) => removeData( target, state ));
-        if ( state && states.includes( state )) {
-          setData( target, state );
-        }
-      }
-    };
-  }
-
-  const setPositionX = handleState([ 'scrollLeft', 'scrollRight', 'scrollX' ]);
-  const setPositionY = handleState([ 'scrollTop', 'scrollBottom', 'scrollY' ]);
-  const setAnimationX = handleState(['scrollingX']);
-  const setAnimationY = handleState(['scrollingY']);
-  const setDirectionX = handleState([ 'scrollingLeft', 'scrollingRight' ]);
-  const setDirectionY = handleState([ 'scrollingUp', 'scrollingDown' ]);
-
-  function setScrollState({ target }) {
-    // 纵向状态设置
-    if ( isTop()) {
-      setPositionY( target, 'scrollTop' );
-    } else if ( isBottom()) {
-      setPositionY( target, 'scrollBottom' );
-    } else {
-      setPositionY( target, 'scrollY' );
-    }
-    // 横向状态设置
-    if ( isLeft()) {
-      setPositionX( target, 'scrollLeft' );
-    } else if ( isRight()) {
-      setPositionX( target, 'scrollRight' );
-    } else {
-      setPositionX( target, 'scrollX' );
-    }
-  }
+  const { target, win, mode, isPageScroll, getScroll, handleDestroy, resetState,
+    isTop, isBottom, isLeft, isRight,
+    getPosition, getClientSize, getScrollSize, getFromRange, hasScrollY,
+    overscroll } = scope;
 
   function getNearestScrollble( dom ) {
     return hasScrollY( dom ) ? dom : getParent( dom, hasScrollY );
@@ -115,17 +35,17 @@ function OverScroll( options ) {
     scrollTop = overscroll.scrollTop
   ) {
     // 取出滚动区域大小和可视范围计算滚动位置
-    const { scrollHeight, scrollWidth, clientWidth, clientHeight } = overscroll;
-    const scrollLeftRange = getFromRange( 0, scrollWidth - clientWidth );
-    const scrollTopRange = getFromRange( 0, scrollHeight - clientHeight );
-    overscroll.scrollLeft = scrollLeftRange( scrollLeft );
-    overscroll.scrollTop = scrollTopRange( scrollTop );
-    setScrollState( options );
+    const { scrollTopRange, scrollLeftRange } = overscroll;
+    const newScrollTop = scrollTopRange( scrollTop );
+    const newScrollLeft = scrollLeftRange( scrollLeft );
+    resetState( newScrollTop, newScrollLeft );
+    overscroll.scrollLeft = newScrollLeft;
+    overscroll.scrollTop = newScrollTop;
     if ( isPageScroll ) {
       win.scrollTo( overscroll.scrollLeft, overscroll.scrollTop );
     } else {
-      options.target.scrollTop = overscroll.scrollTop;
-      options.target.scrollLeft = overscroll.scrollLeft;
+      target.scrollTop = overscroll.scrollTop;
+      target.scrollLeft = overscroll.scrollLeft;
     }
   }
 
@@ -139,27 +59,23 @@ function OverScroll( options ) {
     overscroll.scrollHeight = scrollHeight;
     overscroll.clientWidth = clientWidth;
     overscroll.clientHeight = clientHeight;
+    overscroll.scrollTopRange = getFromRange( 0, scrollHeight - clientHeight );
+    overscroll.scrollLeftRange = getFromRange( 0, scrollWidth - clientWidth );
   }
 
-  const registerScrollMove = ({ target }) => {
+  const registerScrollMove = () => {
     let v = 0;
     const a = ( v ) => {
       return v > 30 ? 1.5 : ( 1 - Math.cos( Math.PI * v / 30 )) / 2 * 1.5 * 29 / 30 + 1 / 30;
     };
     let lastTime = 0;
     const getVelocity = getFromRange( 2, 50 );
-    onDestroy( requestAnimFrame(( time ) => {
+    handleDestroy( requestAnimFrame(( time ) => {
       const { scrollLeft, scrollTop } = overscroll;
-      if ( v === 0 ) {
-        setAnimationY( target );
-        setDirectionY( target );
-      }
       if ( lastTime === 0 ) {
-        reset( options );
+        reset( scope );
       } else if ( hasScrollY() && v !== 0 ) {
         v = sign( v ) * Math.max( 0, Math.abs( v ) - a( Math.abs( v )));
-        setAnimationY( target, 'scrollingY' );
-        setDirectionY( target, v > 0 ? 'scrollingDown' : 'scrollingUp' );
         setScroll( scrollLeft, scrollTop + v );
       }
       lastTime = time;
@@ -174,6 +90,7 @@ function OverScroll( options ) {
       },
       scrollStop() {
         v = 0;
+        setScroll();
       }
     };
   };
@@ -188,12 +105,8 @@ function OverScroll( options ) {
     const divisor = ( d, S ) => esseOut((( S - d ) / S ));
     const bound = ( d, S ) => boundOut((( S - d ) / S ));
     let rebound = false;
-    onDestroy( requestAnimFrame(() => {
+    handleDestroy( requestAnimFrame(() => {
       const { scrollLeft, scrollTop, clientHeight } = overscroll;
-      if ( v === 0 ) {
-        setAnimationY( target );
-        setDirectionY( target );
-      }
       if ( hasScrollY() && d !== 0 ) {
         if ( v > 0 !== d > 0 ) {
           rebound = true;
@@ -206,8 +119,6 @@ function OverScroll( options ) {
           v = sign( d ) * Math.max( 0.5, 30 * divisor( Math.abs( d ), clientHeight ));
           d = sign( d ) * Math.max( Math.abs( d ) - Math.abs( v ), 0 );
         }
-        setAnimationY( target, 'scrollingY' );
-        setDirectionY( target, v > 0 ? 'scrollingDown' : 'scrollingUp' );
         setScroll( scrollLeft, scrollTop + v );
       }
       if ( d === 0 ) {
@@ -225,6 +136,7 @@ function OverScroll( options ) {
         rebound = false;
         v = 0;
         d = 0;
+        setScroll();
       }
     };
   };
@@ -232,21 +144,21 @@ function OverScroll( options ) {
   let scrollMove;
   let scrollStop;
   if ( mode === 'section' ) {
-    const modeMove = registerSectionMove( options );
+    const modeMove = registerSectionMove();
     scrollMove = modeMove.scrollMove;
     scrollStop = modeMove.scrollStop;
   }
 
   if ( mode === 'scroll' ) {
-    const modeMove = registerScrollMove( options );
+    const modeMove = registerScrollMove();
     scrollMove = modeMove.scrollMove;
     scrollStop = modeMove.scrollStop;
   }
 
   function addMouseWheelEvent({ target, html, onScroll, isPageScroll }) {
     const eventName = browser.firefox ? 'DOMMouseScroll' : 'mousewheel';
-    onDestroy( addEventListener( target, 'mousedown', scrollStop ).remove );
-    onDestroy( addEventListener( isPageScroll ? html : target, eventName, ( event ) => {
+    handleDestroy( addEventListener( target, 'mousedown', scrollStop ).remove );
+    handleDestroy( addEventListener( isPageScroll ? html : target, eventName, ( event ) => {console.log(event)
       const { deltaY } = event;
       const { top, left } = getScroll();
       const scrollble = getNearestScrollble( event.target );
@@ -281,7 +193,7 @@ function OverScroll( options ) {
       const overscroll = getNearestScrollble( event.target );
       if ( overscroll === target ) {
         if ( type === 'panstart' ) {
-          reset( options );
+          reset( scope );
           scrollLeft = overscroll.scrollLeft;
           scrollTop = overscroll.scrollTop;
         } else if ( type === 'panend' ) {
@@ -291,13 +203,13 @@ function OverScroll( options ) {
         }
       }
     });
-    onDestroy(() => manager.destroy());
-    onDestroy( addEventListener( target, 'touchstart', scrollStop ).remove );
+    handleDestroy(() => manager.destroy());
+    handleDestroy( addEventListener( target, 'touchstart', scrollStop ).remove );
   }
 
   if ( mode === 'scroll' ) {
-    addHammerScroll( options );
-    addMouseWheelEvent( options );
+    addHammerScroll( scope );
+    addMouseWheelEvent( scope );
   }
 
   function getPoss({ anchors }) {
@@ -325,12 +237,12 @@ function OverScroll( options ) {
       const overscroll = getNearestScrollble( event.target );
       if ( overscroll === target ) {
         if ( type === 'panstart' ) {
-          reset( options );
+          reset( scope );
           scrollLeft = overscroll.scrollLeft;
           scrollTop = overscroll.scrollTop;
         } else if ( type === 'panend' ) {
-          reset( options );
-          poss = getPoss( options );
+          reset( scope );
+          poss = getPoss( scope );
           const { clientHeight } = overscroll;
           scrollLeft = overscroll.scrollLeft;
           scrollTop = overscroll.scrollTop;
@@ -369,13 +281,13 @@ function OverScroll( options ) {
         }
       }
     });
-    onDestroy(() => mc.destroy());
-    onDestroy( addEventListener( target, 'touchstart', scrollStop ).remove );
+    handleDestroy(() => mc.destroy());
+    handleDestroy( addEventListener( target, 'touchstart', scrollStop ).remove );
   }
 
   if ( mode === 'section' ) {
-    initSections( options );
-    addHammerSection( options );
+    initSections( scope );
+    addHammerSection( scope );
   }
 
   return {
@@ -383,4 +295,4 @@ function OverScroll( options ) {
   };
 }
 
-export default compose( OverScroll, getScope );
+export default compose( OverScroll, initOverScroll, getScope );

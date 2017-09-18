@@ -1,6 +1,8 @@
 
 import is from 'whatitis';
-import { getDocument, getWindow } from './dom';
+import domStates from './domStates';
+import handleDestroy from './handleDestroy';
+import domUtils, { getDocument, getWindow } from './utils/dom';
 
 
 const X = 'x';
@@ -184,12 +186,35 @@ function getOptions({
 
 export default ( options ) => {
 
+  const overscroll = {
+    scrollTop: 0,
+    scrollLeft: 0,
+    scrollHeight: 0,
+    scrollWidth: 0,
+    destroy: null
+  };
+
   const scope = {
-    X, Y, XY, xreg, yreg, hasX, hasY, hasXY, OVERSCROLL, OVERSCROLLX, OVERSCROLLY
+    X,
+    Y,
+    XY,
+    xreg,
+    yreg,
+    hasX,
+    hasY,
+    hasXY,
+    OVERSCROLL,
+    OVERSCROLLX,
+    OVERSCROLLY,
+    overscroll
   };
 
   Object.assign( scope, getOptions( options ));
-  Object.assign( scope, { getScroll: getScrollByAxis( scope ) });
+  Object.assign( scope, domUtils( scope ));
+  Object.assign( scope, domStates( scope ), {
+    getScroll: getScrollByAxis( scope ),
+    handleDestroy: handleDestroy( scope )
+  });
 
   return scope;
 };

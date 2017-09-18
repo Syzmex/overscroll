@@ -1,5 +1,4 @@
 
-// eslint-disable-next-line
 import { paths, getEntry, getOutput, loaders, plugins, combine } from 'kiwiai';
 
 const { urlLoader, babelLoader, jsonLoader } = loaders;

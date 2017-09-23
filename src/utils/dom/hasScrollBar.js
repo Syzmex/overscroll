@@ -11,7 +11,7 @@ function compose( funcA, funcB ) {
   };
 }
 
-const scrollble = ( attr ) => ( dom ) => {
+const scrollable = ( attr ) => ( dom ) => {
   return [ 'overlay', 'scroll', 'auto' ].includes( get( dom, attr ));
 };
 
@@ -19,12 +19,12 @@ export default ({ body, html, target }) => {
 
   function hasScrollX( dom ) {
     return dom.scrollWidth > dom.clientWidth &&
-      ( hasData( dom, 'OverScrollX' ) || scrollble( 'overflow-x' )( dom ));
+      ( hasData( dom, 'OverScrollX' ) || scrollable( 'overflow-x' )( dom ));
   }
 
   function hasScrollY( dom ) {
     return dom.scrollHeight > dom.clientHeight &&
-      ( hasData( dom, 'OverScrollY' ) || scrollble( 'overflow-y' )( dom ));
+      ( hasData( dom, 'OverScrollY' ) || scrollable( 'overflow-y' )( dom ));
   }
 
   function scrollingElement( dom = target ) {

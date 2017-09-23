@@ -7,15 +7,19 @@ import hasScrollBar from './hasScrollBar';
 import contains from './contains';
 import domData from './domData';
 
-export getDocument from './getDocument';
-export getWindow from './getWindow';
-export getParent from './getParent';
+import getDocument from './getDocument';
+import getWindow from './getWindow';
+import getParent from './getParent';
+
 
 export default ( scope ) => {
   return {
     domData,
     contains,
     getFromRange,
+    getWindow,
+    getParent,
+    getDocument,
     getOffset: getOffset( scope ),
     getPosition: getPosition( scope ),
     getClientSize: getClientSize( scope ),

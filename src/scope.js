@@ -1,8 +1,12 @@
 
 import is from 'whatitis';
+import actions from './actions';
+import domUtils from './utils/dom';
 import domStates from './domStates';
-import handleDestroy from './handleDestroy';
-import domUtils, { getDocument, getWindow } from './utils/dom';
+import animations from './animations';
+import getWindow from './utils/dom/getWindow';
+import getDocument from './utils/dom/getDocument';
+import { handleDestroy, handleScroll, handleBeforeScroll, handleAfterScroll } from './handlers';
 
 
 const X = 'x';
@@ -76,6 +80,9 @@ const defaultOptions = {
   watchInterval: 100,
   watch: null,
   onScroll: null,
+  onBeforeScroll: null,
+  onAfterScroll: null,
+  onDestroy: null,
   getContainer: null,
   isPageScroll: false,
   mode: 'scroll', // 'section'
@@ -93,6 +100,9 @@ function getOptions({
   watchInterval,
   watch,
   onScroll,
+  onBeforeScroll,
+  onAfterScroll,
+  onDestroy,
   // getContainer,
   mode,
   anchors,
@@ -157,6 +167,18 @@ function getOptions({
     options.onScroll = onScroll;
   }
 
+  if ( is.Function( onBeforeScroll )) {
+    options.onBeforeScroll = onBeforeScroll;
+  }
+
+  if ( is.Function( onAfterScroll )) {
+    options.onAfterScroll = onAfterScroll;
+  }
+
+  if ( is.Function( onDestroy )) {
+    options.onDestroy = onDestroy;
+  }
+
   if ( is.Function( watch )) {
     options.watch = watch;
     if ( is.Number( watchInterval ) && watchInterval > 50 ) {
@@ -167,6 +189,9 @@ function getOptions({
   if ( mode === 'section' && is.Array( anchors ) && anchors.every( is.Element )) {
     options.mode = mode;
     options.anchors = anchors;
+    options.axis = hasY( options.axis ) ? Y : X;
+    options.scrollX = options.axis === X;
+    options.scrollY = options.axis === Y;
     if ( is.String( switchScale ) && /^\d*$/.test( switchScale )) {
       switchScale = [ parseFloat( switchScale ), parseFloat( switchScale ) ];
     }
@@ -210,11 +235,15 @@ export default ( options ) => {
   };
 
   Object.assign( scope, getOptions( options ));
-  Object.assign( scope, domUtils( scope ));
-  Object.assign( scope, domStates( scope ), {
+  Object.assign( scope, domUtils( scope ), {
     getScroll: getScrollByAxis( scope ),
-    handleDestroy: handleDestroy( scope )
+    handleDestroy: handleDestroy( scope ),
+    handleBeforeScroll: handleBeforeScroll( scope ),
+    handleAfterScroll: handleAfterScroll( scope ),
+    handleScroll: handleScroll( scope )
   });
-
+  Object.assign( scope, domStates( scope ));
+  Object.assign( scope, actions( scope ));
+  Object.assign( scope, animations( scope ));
   return scope;
 };

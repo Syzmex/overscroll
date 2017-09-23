@@ -1,7 +1,8 @@
 
 export default ( scope ) => {
 
-  const { target, overscroll, domData: { setData, hasData, removeData }} = scope;
+  const { target, overscroll, domData: { setData, hasData, removeData },
+    hasScrollY, hasScrollX } = scope;
 
   function handleState( states ) {
     return function( target, state = '' ) {
@@ -63,20 +64,29 @@ export default ( scope ) => {
     setAnimationY( target );
   }
 
-  function isTop() {
-    return overscroll.scrollTop <= 1;
+  function isTop( dom = overscroll ) {
+    return dom.scrollTop < 1;
   }
 
-  function isBottom() {
-    return overscroll.scrollTop === overscroll.scrollHeight - overscroll.clientHeight;
+  function isBottom( dom = overscroll ) {
+    return dom.scrollTop === dom.scrollHeight - dom.clientHeight;
   }
 
-  function isLeft() {
-    return overscroll.scrollLeft <= 1;
+  function isLeft( dom = overscroll ) {
+    return dom.scrollLeft < 1;
   }
 
-  function isRight() {
-    return overscroll.scrollLeft === overscroll.scrollWidth - overscroll.clientWidth;
+  function isRight( dom = overscroll ) {
+    return dom.scrollLeft === dom.scrollWidth - dom.clientWidth;
+  }
+
+  function canScroll( dom ) {
+    return {
+      top: hasScrollY( dom ) && !isTop( dom ),
+      left: hasScrollX( dom ) && !isLeft( dom ),
+      right: hasScrollX( dom ) && !isRight( dom ),
+      bottom: hasScrollY( dom ) && !isBottom( dom )
+    };
   }
 
   // 滚动状态设置完成后运行该函数
@@ -137,7 +147,8 @@ export default ( scope ) => {
     scrollingRight,
     scrollingStopX,
     scrollingStopY,
-    resetState
+    resetState,
+    canScroll
   };
 
 };

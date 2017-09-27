@@ -6,7 +6,8 @@ import domStates from './domStates';
 import animations from './animations';
 import getWindow from './utils/dom/getWindow';
 import getDocument from './utils/dom/getDocument';
-import { handleDestroy, handleScroll, handleBeforeScroll, handleAfterScroll } from './handlers';
+import { handleDestroy, handleScroll, handleBeforeScroll, handleAfterScroll,
+  handleInit } from './handlers';
 
 
 const X = 'x';
@@ -79,6 +80,7 @@ const defaultOptions = {
   target: null,
   watchInterval: 100,
   watch: null,
+  onInit: null,
   onScroll: null,
   onBeforeScroll: null,
   onAfterScroll: null,
@@ -87,7 +89,8 @@ const defaultOptions = {
   isPageScroll: false,
   mode: 'scroll', // 'section'
   anchors: null,
-  switchScale: [ 0.2, 0.2 ] // [往上拉的距离比例，往下拉的距离比例]
+  switchScale: [ 0.2, 0.2 ], // [往上拉的距离比例，往下拉的距离比例]
+  position: [ 0, 0 ]
 };
 
 function getOptions({
@@ -99,6 +102,7 @@ function getOptions({
   target,
   watchInterval,
   watch,
+  onInit,
   onScroll,
   onBeforeScroll,
   onAfterScroll,
@@ -106,7 +110,8 @@ function getOptions({
   // getContainer,
   mode,
   anchors,
-  switchScale
+  switchScale,
+  position
 } = {}) {
 
   const options = Object.assign({}, defaultOptions );
@@ -119,14 +124,17 @@ function getOptions({
   if ( is.Undefined( target ) || [ html, body ].includes( target )) {
     options.target = doc.scrollingElement || body;
     options.isPageScroll = true;
-  }
-
-  // 元素装载容器
-  if ( options.target === html ) {
-    options.container = options.target === html ? body : options.target;
   } else {
     options.target = target;
   }
+
+  // 元素装载容器
+  // if ( target === html ) {
+  //   // options.container = options.target === html ? body : options.target;
+  //   options.target = body;
+  // } else {
+  //   options.target = target;
+  // }
 
   // container => containerX containerY
   // if ( is.Function( getContainer )) {
@@ -162,6 +170,11 @@ function getOptions({
   }
 
   // 事件
+
+  if ( is.Function( onInit )) {
+    options.onInit = onInit;
+  }
+
   // onScroll( scrollTop, scrollLeft )
   if ( is.Function( onScroll )) {
     options.onScroll = onScroll;
@@ -186,12 +199,24 @@ function getOptions({
     }
   }
 
-  if ( mode === 'section' && is.Array( anchors ) && anchors.every( is.Element )) {
+  if ( is.Array( position ) && position.every( is.Number )) {
+    options.position = position;
+  }
+
+  if ( mode === 'section' ) {
+
     options.mode = mode;
-    options.anchors = anchors;
     options.axis = hasY( options.axis ) ? Y : X;
     options.scrollX = options.axis === X;
     options.scrollY = options.axis === Y;
+    options.position = is.Number( position ) ? position : 1;
+
+    if ( is.Array( anchors ) && anchors.every( is.Element )) {
+      options.anchors = anchors;
+    } else {
+      options.anchors = Array.prototype.slice.call( target.children );
+    }
+
     if ( is.String( switchScale ) && /^\d*$/.test( switchScale )) {
       switchScale = [ parseFloat( switchScale ), parseFloat( switchScale ) ];
     }
@@ -216,7 +241,10 @@ export default ( options ) => {
     scrollLeft: 0,
     scrollHeight: 0,
     scrollWidth: 0,
-    destroy: null
+    clientHeight: 0,
+    clientWidth: 0,
+    section: 0,
+    scrolling: false
   };
 
   const scope = {
@@ -240,7 +268,8 @@ export default ( options ) => {
     handleDestroy: handleDestroy( scope ),
     handleBeforeScroll: handleBeforeScroll( scope ),
     handleAfterScroll: handleAfterScroll( scope ),
-    handleScroll: handleScroll( scope )
+    handleScroll: handleScroll( scope ),
+    handleInit: handleInit( scope )
   });
   Object.assign( scope, domStates( scope ));
   Object.assign( scope, actions( scope ));

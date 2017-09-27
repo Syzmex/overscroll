@@ -14,7 +14,7 @@ const a = ( v ) => {
 };
 
 const easeInOut = function( t, b, c, d ) {
-  if (( t /= d / 2 ) < 1 ) return c / 2 * t * t + b;
+  if (( t /= d / 2 ) < 1 ) return c / 2 * t * t + b; // eslint-disable-line
   return -c / 2 * (( --t ) * ( t - 2 ) - 1 ) + b;
 };
 
@@ -23,7 +23,7 @@ export default ( scope ) => {
   const { handleDestroy, overscroll, hasScrollY, target, html,
     onScroll, isPageScroll, getNearestScrollable, resetCache, canScroll,
     isTop, isBottom, isLeft, isRight, getFromRange, hasScrollX, onBeforeScroll,
-    onAfterScroll, scrollX, scrollY } = scope;
+    onAfterScroll, scrollX, scrollY, getScroll } = scope;
 
   const xory = ( func ) => ( x, y ) => {
     if ( scrollX && scrollY ) {
@@ -37,7 +37,7 @@ export default ( scope ) => {
 
   const abs = Math.abs;
   const max = Math.max;
-  const round = Math.round;
+  const min = Math.min;
   const setScroll = xory( scope.setScroll );
   const getVelocity = ( v ) => {
     return v === 0 ? 0 : getFromRange( 2, 50 )( v );
@@ -62,26 +62,36 @@ export default ( scope ) => {
       // 滚动到指定位置
       if ( dx !== 0 || dy !== 0 ) {
         if ( hasScrollY() && dy !== 0 ) {
+          timePointY = min( timePointY, 1 );
           const start = posY - ody;
-          const deltaDy = sign( ody ) * round( easeInOut( timePointY, 0, abs( ody ), 1 ));
-          dy = round( ody - deltaDy );
-          vy = deltaDy - ( scrollTop - start );
+          const delta = sign( ody ) * easeInOut( timePointY, 0, abs( ody ), 1 );
+          dy = ody - delta;
+          vy = delta - ( scrollTop - start );
           // 向下/向上
           if (( isBottom() && vy > 0 ) || ( isTop() && vy < 0 )) {
             vy = 0;
           }
-          timePointY += ( time - lastTime ) / 1000;
+          if ( timePointY === 1 ) {
+            dy = 0;
+          } else {
+            timePointY += ( time - lastTime ) / 1000;
+          }
         }
         if ( hasScrollX() && dx !== 0 ) {
+          timePointX = min( timePointX, 1 );
           const start = posX - odx;
-          const deltaDx = sign( odx ) * round( easeInOut( timePointX, 0, abs( odx ), 1 ));
-          dx = round( odx - deltaDx );
-          vx = deltaDx - ( scrollLeft - start );
+          const delta = sign( odx ) * easeInOut( timePointX, 0, abs( odx ), 1 );
+          dx = odx - delta;
+          vx = delta - ( scrollLeft - start );
           // 向右/向左
           if (( isRight() && vx > 0 ) || ( isLeft() && vx < 0 )) {
             vx = 0;
           }
-          timePointX += ( time - lastTime ) / 1000;
+          if ( timePointX === 1 ) {
+            dx = 0;
+          } else {
+            timePointX += ( time - lastTime ) / 1000;
+          }
         }
       }
 
@@ -103,17 +113,20 @@ export default ( scope ) => {
         }
       }
 
-      // 滚动开始和结束
-      // if ( ovx === 0 && ovy === 0 && ( vx !== 0 || vy !== 0 )) {
-      //   onBeforeScroll.call( target, { ...overscroll });
-      // }
+      if ( !overscroll.scrolling &&
+        ovx === 0 && ovy === 0 && dx === 0 && dy === 0 && ( vx !== 0 || vy !== 0 )
+      ) {
+        onBeforeScroll();
+      }
 
       if ( vx !== 0 || vy !== 0 ) {
         setScroll( scrollLeft + vx, scrollTop + vy );
-        onScroll.call( target, { ...overscroll });
+        if ( dx !== 0 || dy !== 0 ) {
+          onScroll();
+        }
       }
 
-      // 指定距离移动时：速度清空必须在设置滚动之后
+      // 指定距离移动时：速度清空必须 setScroll 之后
       if ( dx === 0 && posX !== 0 ) {
         vx = 0;
         odx = 0;
@@ -127,33 +140,44 @@ export default ( scope ) => {
         timePointY = 0;
       }
 
-      if ( vx === 0 && vy === 0 && ( ovx !== 0 || ovy !== 0 ) && ( dx === 0 && dy === 0 )) {
-        onAfterScroll.call( target, { ...overscroll });
+      if ( overscroll.scrolling &&
+        vx === 0 && vy === 0 && dx === 0 && dy === 0 && ( ovx !== 0 || ovy !== 0 )
+      ) {
+        setScroll();
+        onAfterScroll();
       }
 
       // 用于计算滚动的开始和结束
       ovx = vx;
       ovy = vy;
+
       // 用于计算时间间隔
       lastTime = time;
+
     }).cancel );
     return {
+
       scrollMove: xory(( velocityX = 0, velocityY = 0 ) => {
+
         if ( vy > 0 !== velocityY > 0 ) {
           vy = 0;
         }
         if ( vx > 0 !== velocityX > 0 ) {
           vx = 0;
         }
+
         vy += sign( velocityY ) * getVelocity( abs( velocityY ));
         vy = sign( velocityY ) * getVelocity( abs( vy ));
         vx += sign( velocityX ) * getVelocity( abs( velocityX ));
         vx = sign( velocityX ) * getVelocity( abs( vx ));
+
       }),
+
       scrollTo: xory((
         positionX = overscroll.scrollLeft,
         positionY = overscroll.scrollTop
       ) => {
+
         // 一个动作没有结束是开始另一个动作
         if ( timePointX !== 0 || timePointY !== 0 ) {
           vx = 0;
@@ -169,7 +193,7 @@ export default ( scope ) => {
           timePointX = 0;
           timePointY = 0;
         } else {
-          onBeforeScroll.call( target, { ...overscroll });
+          onBeforeScroll();
         }
         const { scrollTop, scrollLeft } = overscroll;
         dx = positionX - scrollLeft;
@@ -179,9 +203,10 @@ export default ( scope ) => {
         odx = dx;
         ody = dy;
       }),
+
       scrollStop() {
         if ( vx !== 0 || vy !== 0 ) {
-          onAfterScroll.call( target, { ...overscroll });
+          onAfterScroll();
         }
         vx = 0;
         vy = 0;
@@ -208,30 +233,47 @@ export default ( scope ) => {
       const nearest = getNearestScrollable( event.target );
       const targetCantTo = canScroll( target );
       const canTo = nearest === target ? targetCantTo : canScroll( nearest );
-      const cantscroll =
-        ( !canTo.top && deltaY > 0 ) ||
-        ( !canTo.bottom && deltaY < 0 ) ||
-        ( !canTo.left && -deltaX > 0 ) ||
-        ( !canTo.right && -deltaX < 0 );
-      const targetCantscroll =
-        ( !targetCantTo.top && deltaY > 0 ) ||
-        ( !targetCantTo.bottom && deltaY < 0 ) ||
-        ( !targetCantTo.left && -deltaX > 0 ) ||
-        ( !targetCantTo.right && -deltaX < 0 );
-
-      // 子元素可以滚动，仅判断上下滚动的冒泡
-      if ( nearest !== target && cantscroll && !targetCantscroll ) {
+      const cantscrollX = ( !canTo.top && deltaY > 0 ) || ( !canTo.bottom && deltaY < 0 );
+      const cantscrollY = ( !canTo.left && -deltaX > 0 ) || ( !canTo.right && -deltaX < 0 );
+      const targetCantscrollX = ( !targetCantTo.top && deltaY > 0 ) || ( !targetCantTo.bottom && deltaY < 0 );
+      const targetCantscrollY = ( !targetCantTo.left && -deltaX > 0 ) || ( !targetCantTo.right && -deltaX < 0 );
+      const scrollTop = overscroll.scrollTop;
+      const scrollLeft = overscroll.scrollLeft;
+      let x = scrollLeft;
+      let y = scrollTop;
+      if (
+        ( nearest !== target && cantscrollX && !targetCantscrollX ) ||
+        ( nearest === target && !targetCantscrollX )
+      ) {
+        x = deltaX;
+      }
+      if (
+        ( nearest !== target && cantscrollY && !targetCantscrollY ) ||
+        ( nearest === target && !targetCantscrollY )
+      ) {
+        y = -deltaY;
+      }
+      if ( x !== 0 || y !== 0 ) {
         resetCache( scope );
-        // 按住 shift x方向滚动
-        scrollMove( shiftKey && deltaX === 0 ? -deltaY : deltaX, -deltaY );
-        event.preventDefault();
-        event.stopPropagation();
-      } else if ( nearest === target && !cantscroll ) {
-        resetCache( scope );
-        scrollMove( shiftKey && deltaX === 0 ? -deltaY : deltaX, -deltaY );
+        scrollMove( shiftKey && x === 0 ? y : x, y );
         event.preventDefault();
         event.stopPropagation();
       }
+      // if ( !targetCantscroll ) {
+      //   // 子元素可以滚动，仅判断上下滚动的冒泡
+      //   if ( nearest !== target && cantscroll ) {console.log(2)
+      //     resetCache( scope );
+      //     // 按住 shift x方向滚动
+      //     scrollMove( shiftKey && deltaX === 0 ? -deltaY : deltaX, -deltaY );
+      //     event.preventDefault();
+      //     event.stopPropagation();
+      //   } else if ( nearest === target ) {console.log(1)
+      //     resetCache( scope );
+      //     scrollMove( shiftKey && deltaX === 0 ? -deltaY : deltaX, -deltaY );
+      //     event.preventDefault();
+      //     event.stopPropagation();
+      //   }
+      // }
     }).remove );
   }
 
@@ -249,24 +291,23 @@ export default ( scope ) => {
         return;
       }
 
-      let x = 0;
-      let y = 0;
       const { type, velocityY, velocityX, deltaX, deltaY } = event;
       const nearest = handleTarget || getNearestScrollable( event.target );
       const targetCantTo = canScroll( target );
       const canTo = nearest === target ? targetCantTo : canScroll( nearest );
-      const cantscrollX = ( !canTo.left && velocityX > 0 ) || ( !canTo.right && velocityX < 0 );
-      const cantscrollY = ( !canTo.top && velocityY > 0 ) || ( !canTo.bottom && velocityY < 0 );
-      const targetCantscrollX = ( !targetCantTo.left && velocityX > 0 ) || ( !targetCantTo.right && velocityX < 0 );
-      const targetCantscrollY = ( !targetCantTo.top && velocityY > 0 ) || ( !targetCantTo.bottom && velocityY < 0 );
+      const cantscrollX = ( !canTo.left && velocityX >= 0 ) || ( !canTo.right && velocityX <= 0 );
+      const cantscrollY = ( !canTo.top && velocityY >= 0 ) || ( !canTo.bottom && velocityY <= 0 );
+      const targetCantscrollX = ( !targetCantTo.left && velocityX >= 0 ) || ( !targetCantTo.right && velocityX <= 0 );
+      const targetCantscrollY = ( !targetCantTo.top && velocityY >= 0 ) || ( !targetCantTo.bottom && velocityY <= 0 );
       const scrollTop = overscroll.scrollTop;
       const scrollLeft = overscroll.scrollLeft;
+      let x = scrollLeft;
+      let y = scrollTop;
       if ( type === 'panstart' ) {
         resetCache( scope );
         lastDeltaX = 0;
         lastDeltaY = 0;
         handleTarget = nearest;
-        onBeforeScroll.call( target, { ...overscroll });
       } else if ( type === 'panend' ) {
         handleTarget = null;
         if (
@@ -283,19 +324,25 @@ export default ( scope ) => {
         }
         if ( x !== 0 || y !== 0 ) {
           scrollMove( x, y );
-        } else {
-          onAfterScroll.call( target, { ...overscroll });
+        } else if ( overscroll.scrolling ) {
+          onAfterScroll();
         }
-      } else if ( nearest === target ) {
+      }
+
+      // panmove
+      else if ( nearest === target ) {
         if ( !targetCantscrollX ) {
           x = scrollLeft - ( deltaX - lastDeltaX );
         }
         if ( !targetCantscrollY ) {
           y = scrollTop - ( deltaY - lastDeltaY );
         }
-        if ( x !== 0 || y !== 0 ) {
+        if ( x !== scrollLeft || y !== scrollTop ) {
+          if ( !overscroll.scrolling ) {
+            onBeforeScroll();
+          }
           setScroll( x, y );
-          onScroll.call( target, { ...overscroll });
+          onScroll();
         }
       } else {
         if ( cantscrollX && !targetCantscrollX ) {
@@ -304,9 +351,12 @@ export default ( scope ) => {
         if ( cantscrollY && !targetCantscrollY ) {
           y = scrollTop - ( deltaY - lastDeltaY );
         }
-        if ( x !== 0 || y !== 0 ) {
+        if ( x !== scrollLeft || y !== scrollTop ) {
+          if ( !overscroll.scrolling ) {
+            onBeforeScroll();
+          }
           setScroll( x, y );
-          onScroll.call( target, { ...overscroll });
+          onScroll();
         }
       }
       lastDeltaX = deltaX;
@@ -322,7 +372,23 @@ export default ( scope ) => {
       const anim = runAnimFrame();
       runMouseAction( anim );
       runHammer( anim );
-      return anim;
+      return {
+        scrollTo( positionX, positionY, noAnimation ) {
+          if ( noAnimation === true ) {
+            setScroll( positionX, positionY );
+            return;
+          }
+          anim.scrollStop();
+          anim.scrollTo( positionX, positionY );
+        },
+        position() {
+          const { left, top } = getScroll();
+          return {
+            scrollTop: top,
+            scrollLeft: left
+          };
+        }
+      };
     }
   };
 };

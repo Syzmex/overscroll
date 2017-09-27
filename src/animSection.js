@@ -1,5 +1,4 @@
 
-import is from 'whatitis';
 import Hammer from 'hammerjs';
 import { set } from './utils/css';
 import addEventListener from './utils/dom/addDomEventListener';
@@ -23,18 +22,50 @@ export default ( scope ) => {
 
   const { scrollX, scrollY, handleDestroy, overscroll, hasScrollY, hasScrollX,
     setScroll, target, switchScale, anchors, getPosition, getNearestScrollable,
-    resetCache, getScroll, canScroll, onScroll, onAfterScroll, onBeforeScroll } = scope;
+    resetCache, getScroll, canScroll, onScroll, onAfterScroll, onBeforeScroll,
+    handleAfterScroll, handleBeforeScroll, handleScroll } = scope;
+
+  // 横向排版 getPosition 有小数，所以加上范围限制保证在寻找缓存中的位置信息时能够精确找到
+
+  function getYPoss() {
+    const { scrollTopRange } = overscroll;
+    const { top: scrollTop } = getScroll();
+    return anchors.map( getPosition ).map(({ top }) => scrollTopRange( top + scrollTop ));
+  }
+
+  function getXPoss() {
+    const { scrollLeftRange } = overscroll;
+    const { left: scrollLeft } = getScroll();
+    return anchors.map( getPosition ).map(({ left }) => scrollLeftRange( left + scrollLeft ));
+  }
+
+  let possX;
+  let possY;
+  let scrollCache = null;
+
+  const getNearest = ( pos ) => {
+    const positions = scrollX ? possX : possY;
+    return positions.reduce(( nearest, position ) => {
+      return abs( position - pos ) < abs( nearest - pos ) ? position : nearest;
+    }, null );
+  };
 
   const frame = ( v, d, s, rebound ) => {
-    if ( v > 0 !== d > 0 ) {
+    if (( v > 0 && d < 0 ) || ( v < 0 && d > 0 )) {
       rebound = true;
       v += sign( d ) * max( 0.5, 10 * bound( abs( d ), s ));
       d -= v;
     } else if ( rebound ) {
       v = sign( d ) * max( 0.5, 30 * bound( abs( d ), s ));
+      if ( abs( d ) < abs( v )) {
+        v = d;
+      }
       d = sign( d ) * max( abs( d ) - abs( v ), 0 );
     } else {
       v = sign( d ) * max( 0.5, 30 * divisor( abs( d ), s ));
+      if ( abs( d ) < abs( v )) {
+        v = d;
+      }
       d = sign( d ) * max( abs( d ) - abs( v ), 0 );
     }
     return {
@@ -47,25 +78,16 @@ export default ( scope ) => {
     let vy = 0;
     let dx = 0;
     let dy = 0;
+    let odx = 0;
+    let ody = 0;
     let ovx = 0;
     let ovy = 0;
     let reboundX = false;
     let reboundY = false;
-
-    // let vx = 0;
-    // let vy = 0;
-    // let dx = 0;
-    // let dy = 0;
-
-    // let odx = 0;
-    // let ody = 0;
-    // let posX = 0;
-    // let posY = 0;
-    // let lastTime = 0;
-    // let timePointX = 0;
-    // let timePointY = 0;
     handleDestroy( requestAnimFrame(() => {
+
       const { scrollLeft, scrollTop, clientHeight, clientWidth } = overscroll;
+
       if ( hasScrollY() && dy !== 0 ) {
         const computed = frame( vy, dy, clientHeight, reboundY );
         vy = computed.v;
@@ -78,26 +100,44 @@ export default ( scope ) => {
         reboundX = computed.rebound;
       }
 
+      if ( !overscroll.scrolling &&
+        ovx === 0 && ovy === 0 && ( dx !== 0 || dy !== 0 )
+      ) {
+        onBeforeScroll();
+      }
+
       if ( vx !== 0 || vy !== 0 ) {
-        setScroll( scrollLeft + vx, scrollTop + vy );
-        onScroll.call( target, { ...overscroll });
+        setScroll(
+          dx === 0 ? getNearest( scrollLeft + vx ) : scrollLeft + vx,
+          dy === 0 ? getNearest( scrollTop + vy ) : scrollTop + vy
+        );
+        if ( dx !== 0 || dy !== 0 ) {
+          onScroll();
+        }
       }
 
       if ( dy === 0 ) {
         reboundY = false;
         vy = 0;
+        ody = 0;
       }
       if ( dx === 0 ) {
         reboundX = false;
         vx = 0;
+        odx = 0;
       }
 
-      if ( vx === 0 && vy === 0 && ( ovx !== 0 || ovy !== 0 ) && ( dx === 0 && dy === 0 )) {
-        onAfterScroll.call( target, { ...overscroll });
+      if ( overscroll.scrolling &&
+        vx === 0 && vy === 0 && dx === 0 && dy === 0 && ( ovx !== 0 || ovy !== 0 )
+      ) {
+        scrollCache = null;
+        setScroll();
+        onAfterScroll();
       }
 
       ovx = vx;
       ovy = vy;
+
     }).cancel );
     return {
       scrollMove( velocity, distance ) {
@@ -105,50 +145,51 @@ export default ( scope ) => {
           reboundX = false;
           vx = velocity;
           dx = distance;
+          odx = distance;
         } else {
           reboundY = false;
           vy = velocity;
           dy = distance;
+          ody = distance;
         }
       },
-      scrollTo( position ) {
-
-      },
       scrollStop() {
+        if ( vx !== 0 || vy !== 0 || dx !== 0 || dy !== 0 ) {
+          scrollCache = {
+            vx, vy, dx, dy, odx, ody, reboundX, reboundY
+          };
+        }
         vx = 0;
         vy = 0;
         dx = 0;
+        ovx = 0;
+        ovy = 0;
         dy = 0;
+        odx = 0;
+        ody = 0;
         reboundX = false;
         reboundY = false;
         setScroll();
+      },
+      scrollRestore() {
+        if ( scrollCache ) {
+          vx = scrollCache.vx;
+          vy = scrollCache.vy;
+          dx = scrollCache.dx;
+          dy = scrollCache.dy;
+          odx = scrollCache.odx;
+          ody = scrollCache.ody;
+          reboundX = scrollCache.reboundX;
+          reboundY = scrollCache.reboundY;
+        }
+      },
+      scrollClear() {
+        scrollCache = null;
       }
     };
   };
 
-  function getYPoss() {
-    const { top: scrollTop } = getScroll();
-    return anchors.map( getPosition ).map(({ top }) => top + scrollTop );
-  }
-
-  function getXPoss() {
-    const { left: scrollLeft } = getScroll();
-    return anchors.map( getPosition ).map(({ left }) => left + scrollLeft );
-  }
-
-  function initSections() {
-    anchors.forEach(( element ) => {
-      set( element, 'height', '100%' );
-      set( element, 'width', '100%' );
-    });
-  }
-
-  function runHammer({ scrollMove, scrollStop }) {
-    let possX;
-    let possY;
-    // let scrollLeft;
-    // let scrollTop;
-    let curAngle;
+  function runHammer({ scrollMove, scrollStop, scrollRestore, scrollClear }) {
     let lastDeltaX;
     let lastDeltaY;
     let handleTarget;
@@ -183,6 +224,9 @@ export default ( scope ) => {
       }
     };
 
+    handleDestroy( addEventListener( target, 'touchstart', scrollStop ).remove );
+    handleDestroy( addEventListener( target, 'touchend', scrollRestore ).remove );
+    handleDestroy( addEventListener( target, 'touchcancel', scrollRestore ).remove );
     mc.add( new Hammer.Pan({ direction: Hammer.DIRECTION_ALL, threshold: 0 }));
     mc.on( 'panstart panmove panend', ( event ) => {
       event.preventDefault();
@@ -192,69 +236,58 @@ export default ( scope ) => {
         return;
       }
 
-      let x = 0;
-      let y = 0;
-      const { type, angle, velocityY, velocityX, deltaX, deltaY, offsetDirection } = event;
+      const { type, velocityY, velocityX, deltaX, deltaY, offsetDirection } = event;
       const rightDirection = ( scrollY ? directionY : directionX ).includes( offsetDirection );
       const nearest = handleTarget || getNearestScrollable( event.target );
       const targetCantTo = canScroll( target );
       const canTo = nearest === target ? targetCantTo : canScroll( nearest );
-      const cantscrollX = ( !canTo.left && velocityX > 0 ) || ( !canTo.right && velocityX < 0 );
-      const cantscrollY = ( !canTo.top && velocityY > 0 ) || ( !canTo.bottom && velocityY < 0 );
-      const targetCantscrollX = ( !targetCantTo.left && velocityX > 0 ) || ( !targetCantTo.right && velocityX < 0 );
-      const targetCantscrollY = ( !targetCantTo.top && velocityY > 0 ) || ( !targetCantTo.bottom && velocityY < 0 );
+      const cantscrollX = ( !canTo.left && velocityX >= 0 ) || ( !canTo.right && velocityX <= 0 );
+      const cantscrollY = ( !canTo.top && velocityY >= 0 ) || ( !canTo.bottom && velocityY <= 0 );
+      const targetCantscrollX = ( !targetCantTo.left && velocityX >= 0 ) || ( !targetCantTo.right && velocityX <= 0 );
+      const targetCantscrollY = ( !targetCantTo.top && velocityY >= 0 ) || ( !targetCantTo.bottom && velocityY <= 0 );
       const scrollTop = overscroll.scrollTop;
       const scrollLeft = overscroll.scrollLeft;
+      let x = scrollLeft;
+      let y = scrollTop;
       if ( type === 'panstart' ) {
         resetCache( scope );
-        curAngle = angle;
         lastDeltaX = 0;
         lastDeltaY = 0;
         handleTarget = nearest;
-        onBeforeScroll.call( target, { ...overscroll });
+        if ( nearest === target ) {
+          scrollClear();
+        }
       } else if ( type === 'panend' && scrollY ) {
-        possY = getYPoss( scope );
-        const { clientHeight } = overscroll;
-        const { deltaY, velocityY } = event;
-        const nearestpos = possY.reduce(( pos, top ) => {
-          return top > scrollTop && top < clientHeight + scrollTop ? top : pos;
-        }, 0 );
-        if ( nearestpos !== 0 ) {
-          sectionMoving( velocityY, nearestpos, scrollTop, clientHeight, deltaY );
-          // // 初速度足够触发上下滑动
-          // if ( velocityY > 0.5 ) { // 下滑
-          //   scrollMove( -velocityY * 20, nearestpos - ( scrollTop + clientHeight ));
-          // } else if ( velocityY < -0.5 ) { // 上滑
-          //   scrollMove( -velocityY * 20, nearestpos - scrollTop );
-          // }
-          // // 靠近上方
-          // else if ( nearestpos - scrollTop < downScale * clientHeight ) {
-          //   scrollMove( -velocityY * 20, nearestpos - scrollTop );
-          // }
-          // // 靠近下方
-          // else if ( clientHeight + scrollTop - nearestpos < upScale * clientHeight ) {
-          //   scrollMove( -velocityY * 20, nearestpos - ( scrollTop + clientHeight ));
-          // }
-          // // 在中间位置
-          // else if ( deltaY > 0 ) {
-          //   scrollMove( -velocityY * 20, nearestpos - ( scrollTop + clientHeight ));
-          // } else if ( deltaY < 0 ) {
-          //   scrollMove( -velocityY * 20, nearestpos - scrollTop );
-          // } else if ( nearestpos - scrollTop > clientHeight / 2 ) {
-          //   scrollMove( 0, nearestpos - ( scrollTop + clientHeight ));
-          // } else {
-          //   scrollMove( 0, nearestpos - scrollTop );
-          // }
+        handleTarget = null;
+        possY = getYPoss();
+        if ( nearest !== target && cantscrollY ) {
+          scrollClear();
+        }
+        if ( !possY.includes( scrollTop )) {
+          const { clientHeight } = overscroll;
+          const { deltaY, velocityY } = event;
+          const nearestpos = possY.reduce(( pos, top ) => {
+            return top > scrollTop && top < clientHeight + scrollTop ? top : pos;
+          }, 0 );
+          if ( nearestpos !== 0 ) {
+            sectionMoving( velocityY, nearestpos, scrollTop, clientHeight, deltaY );
+          }
         }
       } else if ( type === 'panend' && scrollX ) {
-        possX = getXPoss( scope );
-        const { clientWidth } = overscroll;
-        const { deltaX, velocityX } = event;
-        const nearestpos = possX.reduce(( pos, left ) => {
-          return left > scrollLeft && left < clientWidth + scrollLeft ? left : pos;
-        }, 0 );
-        if ( nearestpos !== 0 ) {
-          sectionMoving( velocityX, nearestpos, scrollLeft, clientWidth, deltaX );
+        handleTarget = null;
+        possX = getXPoss();
+        if ( nearest !== target && cantscrollX ) {
+          scrollClear();
+        }
+        if ( !possX.includes( scrollLeft )) {
+          const { clientWidth } = overscroll;
+          const { deltaX, velocityX } = event;
+          const nearestpos = possX.reduce(( pos, left ) => {
+            return left > scrollLeft && left < clientWidth + scrollLeft ? left : pos;
+          }, 0 );
+          if ( nearestpos !== 0 ) {
+            sectionMoving( velocityX, nearestpos, scrollLeft, clientWidth, deltaX );
+          }
         }
       } else if ( nearest === target && rightDirection ) {
         if ( !targetCantscrollX ) {
@@ -263,9 +296,12 @@ export default ( scope ) => {
         if ( !targetCantscrollY ) {
           y = scrollTop - ( deltaY - lastDeltaY );
         }
-        if ( x !== 0 || y !== 0 ) {
+        if ( x !== scrollLeft || y !== scrollTop ) {
+          if ( !overscroll.scrolling ) {
+            onBeforeScroll();
+          }
           setScroll( x, y );
-          onScroll.call( target, { ...overscroll });
+          onScroll();
         }
       } else if ( rightDirection ) {
         if ( cantscrollX && !targetCantscrollX ) {
@@ -274,25 +310,98 @@ export default ( scope ) => {
         if ( cantscrollY && !targetCantscrollY ) {
           y = scrollTop - ( deltaY - lastDeltaY );
         }
-        if ( x !== 0 || y !== 0 ) {
+        if ( x !== scrollLeft || y !== scrollTop ) {
+          if ( !overscroll.scrolling ) {
+            onBeforeScroll();
+          }
           setScroll( x, y );
-          onScroll.call( target, { ...overscroll });
+          onScroll();
         }
       }
       lastDeltaX = deltaX;
       lastDeltaY = deltaY;
     });
+
     handleDestroy(() => mc.destroy());
-    handleDestroy( addEventListener( target, 'touchstart', scrollStop ).remove );
+  }
+
+  function position( runtime ) {
+    const { scrollLeft, scrollTop } = overscroll;
+    const curpos = scrollX ? scrollLeft : scrollTop;
+    const poss = scrollX ? ( runtime ? getXPoss() : possX ) : ( runtime ? getYPoss() : possY );
+    return poss.filter(( pos ) => pos <= curpos ).length;
+  }
+
+  function setPositionCache() {
+    overscroll.positions = scrollX ? possX : possY;
+  }
+
+  handleScroll( setPositionCache );
+  handleBeforeScroll( setPositionCache );
+  handleAfterScroll( setPositionCache );
+
+  function setSectionCache() {
+    overscroll.section = position();
+  }
+
+  handleScroll( setSectionCache );
+  // handleBeforeScroll( setSectionCache );
+  handleAfterScroll( setSectionCache );
+
+  function initSections() {
+    anchors.forEach(( element ) => {
+      set( element, 'height', '100%' );
+      set( element, 'width', '100%' );
+    });
+    if ( scrollX ) {
+      possX = getXPoss();
+    } else {
+      possY = getYPoss();
+    }
+    overscroll.section = position( true );
   }
 
   return {
     run() {
-      resetCache( scope );
       initSections();
       const anim = runAnimFrame();
       runHammer( anim );
-      return anim;
+      return {
+        position: () => position( true ),
+        scrollTo( targetPos, noAnimation ) {
+
+          const poss = scrollX ? getXPoss() : getYPoss();
+          const { scrollLeft, scrollTop, clientWidth, clientHeight } = overscroll;
+          const curpos = scrollX ? scrollLeft : scrollTop;
+          const d = scrollX ? clientWidth : clientHeight;
+          const curIndex = poss.indexOf( curpos ) + 1;
+          const index = poss.filter(( pos ) => pos <= targetPos ).length;
+
+          if ( noAnimation === true ) {
+            setScroll( scrollX ? poss[index - 1] : 0, scrollY ? poss[index - 1] : 0 );
+          } else if ( curIndex !== index ) {
+            anim.scrollStop();
+            anim.scrollClear();
+            anim.scrollMove( 0, d * ( index - 1 ) - curpos );
+          }
+        },
+        scrollToSection( index, noAnimation ) {
+
+          const { scrollLeft, scrollTop, clientWidth, clientHeight } = overscroll;
+          const poss = scrollX ? getXPoss() : getYPoss();
+          const curpos = scrollX ? scrollLeft : scrollTop;
+          const d = scrollX ? clientWidth : clientHeight;
+          const curIndex = poss.indexOf( curpos ) + 1;
+
+          if ( noAnimation === true ) {
+            setScroll( scrollX ? poss[index - 1] : 0, scrollY ? poss[index - 1] : 0 );
+          } else if ( curIndex !== index ) {
+            anim.scrollStop();
+            anim.scrollClear();
+            anim.scrollMove( 0, d * ( index - 1 ) - curpos );
+          }
+        }
+      };
     }
   };
 };

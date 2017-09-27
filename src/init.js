@@ -4,7 +4,7 @@ import { set } from './utils/css';
 export default function( scope ) {
 
   const { target, axis, hasX, hasY, domData: { setData }, OVERSCROLL,
-    OVERSCROLLX, OVERSCROLLY } = scope;
+    OVERSCROLLX, OVERSCROLLY, resetCache } = scope;
 
   // 添加样式
   set( target, 'overflow', 'hidden' );
@@ -19,6 +19,9 @@ export default function( scope ) {
   if ( hasY( axis )) {
     setData( target, OVERSCROLLY );
   }
+
+  // 初始化缓存
+  resetCache();
 
   return scope;
 }

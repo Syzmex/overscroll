@@ -9,11 +9,10 @@ export default ( scope ) => {
     scrollLeft = overscroll.scrollLeft,
     scrollTop = overscroll.scrollTop
   ) {
-
     // 取出滚动区域大小和可视范围计算滚动位置
     const { scrollTopRange, scrollLeftRange } = overscroll;
-    const newScrollTop = scrollTopRange( Math.round( scrollTop ));
-    const newScrollLeft = scrollLeftRange( Math.round( scrollLeft ));
+    const newScrollTop = scrollTopRange( scrollTop );
+    const newScrollLeft = scrollLeftRange( scrollLeft );
 
     // 重置dom状态
     resetState( newScrollTop, newScrollLeft );

@@ -233,10 +233,10 @@ export default ( scope ) => {
       const nearest = getNearestScrollable( event.target );
       const targetCantTo = canScroll( target );
       const canTo = nearest === target ? targetCantTo : canScroll( nearest );
-      const cantscrollX = ( !canTo.top && deltaY > 0 ) || ( !canTo.bottom && deltaY < 0 );
-      const cantscrollY = ( !canTo.left && -deltaX > 0 ) || ( !canTo.right && -deltaX < 0 );
-      const targetCantscrollX = ( !targetCantTo.top && deltaY > 0 ) || ( !targetCantTo.bottom && deltaY < 0 );
-      const targetCantscrollY = ( !targetCantTo.left && -deltaX > 0 ) || ( !targetCantTo.right && -deltaX < 0 );
+      const cantscrollY = ( !canTo.top && deltaY > 0 ) || ( !canTo.bottom && deltaY < 0 );
+      const cantscrollX = ( !canTo.left && -deltaX > 0 ) || ( !canTo.right && -deltaX < 0 );
+      const targetCantscrollY = ( !targetCantTo.top && deltaY > 0 ) || ( !targetCantTo.bottom && deltaY < 0 );
+      const targetCantscrollX = ( !targetCantTo.left && -deltaX > 0 ) || ( !targetCantTo.right && -deltaX < 0 );
       const scrollTop = overscroll.scrollTop;
       const scrollLeft = overscroll.scrollLeft;
       let x = scrollLeft;

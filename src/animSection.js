@@ -23,7 +23,7 @@ export default ( scope ) => {
   const { scrollX, scrollY, handleDestroy, overscroll, hasScrollY, hasScrollX,
     setScroll, target, switchScale, anchors, getPosition, getNearestScrollable,
     resetCache, getScroll, canScroll, onScroll, onAfterScroll, onBeforeScroll,
-    handleAfterScroll, handleBeforeScroll, handleScroll } = scope;
+    handleAfterScroll, handleBeforeScroll, handleScroll, handleInit } = scope;
 
   // 横向排版 getPosition 有小数，所以加上范围限制保证在寻找缓存中的位置信息时能够精确找到
 
@@ -336,6 +336,7 @@ export default ( scope ) => {
     overscroll.positions = scrollX ? possX : possY;
   }
 
+  handleInit( setPositionCache );
   handleScroll( setPositionCache );
   handleBeforeScroll( setPositionCache );
   handleAfterScroll( setPositionCache );
@@ -369,7 +370,7 @@ export default ( scope ) => {
       return {
         position: () => position( true ),
         scrollTo( targetPos, noAnimation ) {
-
+          resetCache();
           const poss = scrollX ? getXPoss() : getYPoss();
           const { scrollLeft, scrollTop, clientWidth, clientHeight } = overscroll;
           const curpos = scrollX ? scrollLeft : scrollTop;
@@ -386,7 +387,7 @@ export default ( scope ) => {
           }
         },
         scrollToSection( index, noAnimation ) {
-
+          resetCache();
           const { scrollLeft, scrollTop, clientWidth, clientHeight } = overscroll;
           const poss = scrollX ? getXPoss() : getYPoss();
           const curpos = scrollX ? scrollLeft : scrollTop;

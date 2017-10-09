@@ -13,6 +13,16 @@ import getParent from './getParent';
 
 
 export default ( scope ) => {
+  const { target } = scope;
+  const hasScrollBarFuncs = hasScrollBar( scope );
+  const { hasScrollY, hasScrollX } = hasScrollBarFuncs;
+
+  function getNearestScrollable( dom ) {
+    return hasScrollY( dom ) || hasScrollX( dom ) ? dom : getParent( dom, ( dom ) => {
+      return target === dom || hasScrollY( dom ) || hasScrollX( dom );
+    });
+  }
+
   return {
     domData,
     contains,
@@ -20,10 +30,12 @@ export default ( scope ) => {
     getWindow,
     getParent,
     getDocument,
+    getNearestScrollable,
     getOffset: getOffset( scope ),
     getPosition: getPosition( scope ),
     getClientSize: getClientSize( scope ),
     getScrollSize: getScrollSize( scope ),
-    ...hasScrollBar( scope )
+    ...hasScrollBarFuncs
   };
 };
+

@@ -45,4 +45,17 @@ overscroll({
   //   // console.log( e );
   // }
 });
+overscroll({
+  axis: 'y',
+  target: document.getElementById( 'scroll-y' )
+  // onBeforeScroll: ( e ) => {
+  //   // console.log('onBeforeScroll', e )
+  // },
+  // onAfterScroll: ( e ) => {
+  //   // console.log('onAfterScroll', e )
+  // },
+  // onScroll: ( e ) => {
+  //   // console.log( e );
+  // }
+});
 // console.log(getScrollBarSzie())

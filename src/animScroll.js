@@ -21,9 +21,9 @@ const easeInOut = function( t, b, c, d ) {
 export default ( scope ) => {
 
   const { handleDestroy, overscroll, hasScrollY, target, html,
-    onScroll, isPageScroll, getNearestScrollable, resetCache, canScroll,
-    isTop, isBottom, isLeft, isRight, getFromRange, hasScrollX, onBeforeScroll,
-    onAfterScroll, scrollX, scrollY, getScroll } = scope;
+    onScroll, isPageScroll, resetCache, scrollable, isTop, isBottom, isLeft,
+    isRight, getFromRange, hasScrollX, onBeforeScroll, onAfterScroll, scrollX,
+    scrollY, getScroll } = scope;
 
   const xory = ( func ) => ( x, y ) => {
     if ( scrollX && scrollY ) {
@@ -230,50 +230,27 @@ export default ( scope ) => {
     handleDestroy( addEventListener( target, 'mousedown', scrollStop ).remove );
     handleDestroy( addEventListener( isPageScroll ? html : target, eventName, ( event ) => {
       const { deltaY, deltaX, shiftKey } = event;
-      const nearest = getNearestScrollable( event.target );
-      const targetCantTo = canScroll( target );
-      const canTo = nearest === target ? targetCantTo : canScroll( nearest );
-      const cantscrollY = ( !canTo.top && deltaY > 0 ) || ( !canTo.bottom && deltaY < 0 );
-      const cantscrollX = ( !canTo.left && -deltaX > 0 ) || ( !canTo.right && -deltaX < 0 );
-      const targetCantscrollY = ( !targetCantTo.top && deltaY > 0 ) || ( !targetCantTo.bottom && deltaY < 0 );
-      const targetCantscrollX = ( !targetCantTo.left && -deltaX > 0 ) || ( !targetCantTo.right && -deltaX < 0 );
+      const targetScrollable = scrollable( event.target );
+      const targetUnscrollableY = ( !targetScrollable.top && deltaY >= 0 ) ||
+        ( !targetScrollable.bottom && deltaY <= 0 );
+      const targetUnscrollableX = ( !targetScrollable.left && -deltaX >= 0 ) ||
+        ( !targetScrollable.right && -deltaX <= 0 );
       const scrollTop = overscroll.scrollTop;
       const scrollLeft = overscroll.scrollLeft;
       let x = scrollLeft;
       let y = scrollTop;
-      if (
-        ( nearest !== target && cantscrollX && !targetCantscrollX ) ||
-        ( nearest === target && !targetCantscrollX )
-      ) {
+      if ( !targetUnscrollableX ) {
         x = deltaX;
       }
-      if (
-        ( nearest !== target && cantscrollY && !targetCantscrollY ) ||
-        ( nearest === target && !targetCantscrollY )
-      ) {
+      if ( !targetUnscrollableY ) {
         y = -deltaY;
       }
-      if ( x !== 0 || y !== 0 ) {
+      if ( x !== scrollLeft || y !== scrollTop ) {
         resetCache( scope );
         scrollMove( shiftKey && x === 0 ? y : x, y );
         event.preventDefault();
         event.stopPropagation();
       }
-      // if ( !targetCantscroll ) {
-      //   // 子元素可以滚动，仅判断上下滚动的冒泡
-      //   if ( nearest !== target && cantscroll ) {console.log(2)
-      //     resetCache( scope );
-      //     // 按住 shift x方向滚动
-      //     scrollMove( shiftKey && deltaX === 0 ? -deltaY : deltaX, -deltaY );
-      //     event.preventDefault();
-      //     event.stopPropagation();
-      //   } else if ( nearest === target ) {console.log(1)
-      //     resetCache( scope );
-      //     scrollMove( shiftKey && deltaX === 0 ? -deltaY : deltaX, -deltaY );
-      //     event.preventDefault();
-      //     event.stopPropagation();
-      //   }
-      // }
     }).remove );
   }
 
@@ -292,13 +269,11 @@ export default ( scope ) => {
       }
 
       const { type, velocityY, velocityX, deltaX, deltaY } = event;
-      const nearest = handleTarget || getNearestScrollable( event.target );
-      const targetCantTo = canScroll( target );
-      const canTo = nearest === target ? targetCantTo : canScroll( nearest );
-      const cantscrollX = ( !canTo.left && velocityX >= 0 ) || ( !canTo.right && velocityX <= 0 );
-      const cantscrollY = ( !canTo.top && velocityY >= 0 ) || ( !canTo.bottom && velocityY <= 0 );
-      const targetCantscrollX = ( !targetCantTo.left && velocityX >= 0 ) || ( !targetCantTo.right && velocityX <= 0 );
-      const targetCantscrollY = ( !targetCantTo.top && velocityY >= 0 ) || ( !targetCantTo.bottom && velocityY <= 0 );
+      const targetScrollable = scrollable( handleTarget || event.target );
+      const targetUnscrollableX = ( !targetScrollable.left && velocityX >= 0 ) ||
+        ( !targetScrollable.right && velocityX <= 0 );
+      const targetUnscrollableY = ( !targetScrollable.top && velocityY >= 0 ) ||
+        ( !targetScrollable.bottom && velocityY <= 0 );
       const scrollTop = overscroll.scrollTop;
       const scrollLeft = overscroll.scrollLeft;
       let x = scrollLeft;
@@ -307,22 +282,16 @@ export default ( scope ) => {
         resetCache( scope );
         lastDeltaX = 0;
         lastDeltaY = 0;
-        handleTarget = nearest;
+        handleTarget = event.target;
       } else if ( type === 'panend' ) {
         handleTarget = null;
-        if (
-          ( nearest !== target && cantscrollX && !targetCantscrollX ) ||
-          ( nearest === target && !targetCantscrollX )
-        ) {
+        if ( !targetUnscrollableX ) {
           x = -velocityX * 20;
         }
-        if (
-          ( nearest !== target && cantscrollY && !targetCantscrollY ) ||
-          ( nearest === target && !targetCantscrollY )
-        ) {
+        if ( !targetUnscrollableY ) {
           y = -velocityY * 20;
         }
-        if ( x !== 0 || y !== 0 ) {
+        if ( x !== scrollLeft || y !== scrollTop ) {
           scrollMove( x, y );
         } else if ( overscroll.scrolling ) {
           onAfterScroll();
@@ -330,25 +299,11 @@ export default ( scope ) => {
       }
 
       // panmove
-      else if ( nearest === target ) {
-        if ( !targetCantscrollX ) {
+      else {
+        if ( !targetUnscrollableX ) {
           x = scrollLeft - ( deltaX - lastDeltaX );
         }
-        if ( !targetCantscrollY ) {
-          y = scrollTop - ( deltaY - lastDeltaY );
-        }
-        if ( x !== scrollLeft || y !== scrollTop ) {
-          if ( !overscroll.scrolling ) {
-            onBeforeScroll();
-          }
-          setScroll( x, y );
-          onScroll();
-        }
-      } else {
-        if ( cantscrollX && !targetCantscrollX ) {
-          x = scrollLeft - ( deltaX - lastDeltaX );
-        }
-        if ( cantscrollY && !targetCantscrollY ) {
+        if ( !targetUnscrollableY ) {
           y = scrollTop - ( deltaY - lastDeltaY );
         }
         if ( x !== scrollLeft || y !== scrollTop ) {

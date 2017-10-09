@@ -21,9 +21,9 @@ const max = Math.max;
 export default ( scope ) => {
 
   const { scrollX, scrollY, handleDestroy, overscroll, hasScrollY, hasScrollX,
-    setScroll, target, switchScale, anchors, getPosition, getNearestScrollable,
-    resetCache, getScroll, canScroll, onScroll, onAfterScroll, onBeforeScroll,
-    handleAfterScroll, handleBeforeScroll, handleScroll, handleInit } = scope;
+    setScroll, target, switchScale, anchors, getPosition, resetCache, getScroll,
+    scrollable, onScroll, onAfterScroll, onBeforeScroll, handleAfterScroll,
+    handleBeforeScroll, handleScroll, handleInit } = scope;
 
   // 横向排版 getPosition 有小数，所以加上范围限制保证在寻找缓存中的位置信息时能够精确找到
 
@@ -224,7 +224,9 @@ export default ( scope ) => {
       }
     };
 
+    handleDestroy( addEventListener( target, 'mousedown', scrollStop ).remove );
     handleDestroy( addEventListener( target, 'touchstart', scrollStop ).remove );
+    handleDestroy( addEventListener( target, 'mouseup', scrollRestore ).remove );
     handleDestroy( addEventListener( target, 'touchend', scrollRestore ).remove );
     handleDestroy( addEventListener( target, 'touchcancel', scrollRestore ).remove );
     mc.add( new Hammer.Pan({ direction: Hammer.DIRECTION_ALL, threshold: 0 }));
@@ -238,13 +240,11 @@ export default ( scope ) => {
 
       const { type, velocityY, velocityX, deltaX, deltaY, offsetDirection } = event;
       const rightDirection = ( scrollY ? directionY : directionX ).includes( offsetDirection );
-      const nearest = handleTarget || getNearestScrollable( event.target );
-      const targetCantTo = canScroll( target );
-      const canTo = nearest === target ? targetCantTo : canScroll( nearest );
-      const cantscrollX = ( !canTo.left && velocityX >= 0 ) || ( !canTo.right && velocityX <= 0 );
-      const cantscrollY = ( !canTo.top && velocityY >= 0 ) || ( !canTo.bottom && velocityY <= 0 );
-      const targetCantscrollX = ( !targetCantTo.left && velocityX >= 0 ) || ( !targetCantTo.right && velocityX <= 0 );
-      const targetCantscrollY = ( !targetCantTo.top && velocityY >= 0 ) || ( !targetCantTo.bottom && velocityY <= 0 );
+      const targetScrollable = scrollable( handleTarget || event.target );
+      const targetUnscrollableX = ( !targetScrollable.left && velocityX >= 0 ) ||
+        ( !targetScrollable.right && velocityX <= 0 );
+      const targetUnscrollableY = ( !targetScrollable.top && velocityY >= 0 ) ||
+        ( !targetScrollable.bottom && velocityY <= 0 );
       const scrollTop = overscroll.scrollTop;
       const scrollLeft = overscroll.scrollLeft;
       let x = scrollLeft;
@@ -253,14 +253,14 @@ export default ( scope ) => {
         resetCache( scope );
         lastDeltaX = 0;
         lastDeltaY = 0;
-        handleTarget = nearest;
-        if ( nearest === target ) {
+        handleTarget = event.target;
+        if ( !targetUnscrollableY || !targetUnscrollableX ) {
           scrollClear();
         }
       } else if ( type === 'panend' && scrollY ) {
         handleTarget = null;
         possY = getYPoss();
-        if ( nearest !== target && cantscrollY ) {
+        if ( !targetUnscrollableY ) {
           scrollClear();
         }
         if ( !possY.includes( scrollTop )) {
@@ -276,7 +276,7 @@ export default ( scope ) => {
       } else if ( type === 'panend' && scrollX ) {
         handleTarget = null;
         possX = getXPoss();
-        if ( nearest !== target && cantscrollX ) {
+        if ( !targetUnscrollableX ) {
           scrollClear();
         }
         if ( !possX.includes( scrollLeft )) {
@@ -289,25 +289,11 @@ export default ( scope ) => {
             sectionMoving( velocityX, nearestpos, scrollLeft, clientWidth, deltaX );
           }
         }
-      } else if ( nearest === target && rightDirection ) {
-        if ( !targetCantscrollX ) {
-          x = scrollLeft - ( deltaX - lastDeltaX );
-        }
-        if ( !targetCantscrollY ) {
-          y = scrollTop - ( deltaY - lastDeltaY );
-        }
-        if ( x !== scrollLeft || y !== scrollTop ) {
-          if ( !overscroll.scrolling ) {
-            onBeforeScroll();
-          }
-          setScroll( x, y );
-          onScroll();
-        }
       } else if ( rightDirection ) {
-        if ( cantscrollX && !targetCantscrollX ) {
+        if ( !targetUnscrollableX ) {
           x = scrollLeft - ( deltaX - lastDeltaX );
         }
-        if ( cantscrollY && !targetCantscrollY ) {
+        if ( !targetUnscrollableY ) {
           y = scrollTop - ( deltaY - lastDeltaY );
         }
         if ( x !== scrollLeft || y !== scrollTop ) {

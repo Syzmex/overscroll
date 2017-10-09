@@ -2,7 +2,7 @@
 export default ( scope ) => {
 
   const { target, overscroll, domData: { setData, hasData, removeData },
-    hasScrollY, hasScrollX } = scope;
+    hasScrollY, hasScrollX, getNearestScrollable, getParent } = scope;
 
   function handleState( states ) {
     return function( target, state = '' ) {
@@ -80,13 +80,28 @@ export default ( scope ) => {
     return dom.scrollLeft === dom.scrollWidth - dom.clientWidth;
   }
 
-  function canScroll( dom ) {
+  function scrollableTo( dom ) {
     return {
       top: hasScrollY( dom ) && !isTop( dom ),
       left: hasScrollX( dom ) && !isLeft( dom ),
       right: hasScrollX( dom ) && !isRight( dom ),
       bottom: hasScrollY( dom ) && !isBottom( dom )
     };
+  }
+
+  function scrollable( dom, childrenState = { top: false, left: false, right: false, bottom: false }) {
+    const scrollableDom = getNearestScrollable( dom );
+    const state = scrollableTo( scrollableDom );
+    const newState = {
+      top: state.top && !childrenState.top,
+      left: state.left && !childrenState.left,
+      right: state.right && !childrenState.right,
+      bottom: state.bottom && !childrenState.bottom
+    };
+    if ( target === scrollableDom ) {
+      return newState;
+    }
+    return scrollable( getParent( scrollableDom ), newState );
   }
 
   // 滚动状态设置完成后运行该函数
@@ -148,7 +163,7 @@ export default ( scope ) => {
     scrollingStopX,
     scrollingStopY,
     resetState,
-    canScroll
+    scrollable
   };
 
 };

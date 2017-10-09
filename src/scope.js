@@ -69,7 +69,6 @@ const getScrollByAxis = ({ target, axis, win, html, body, isPageScroll }) => () 
   };
 };
 
-
 const defaultOptions = {
   axis: XY,
   prefix: OVERSCROLL,

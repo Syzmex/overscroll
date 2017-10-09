@@ -2,8 +2,8 @@
 
 export default ( scope ) => {
 
-  const { target, win, overscroll, isPageScroll, resetState, getScroll, hasScrollX,
-    getFromRange, getScrollSize, getClientSize, hasScrollY, getParent } = scope;
+  const { target, win, overscroll, isPageScroll, resetState, getScroll,
+    getFromRange, getScrollSize, getClientSize } = scope;
 
   function setScroll(
     scrollLeft = overscroll.scrollLeft,
@@ -42,13 +42,7 @@ export default ( scope ) => {
     overscroll.scrollLeftRange = getFromRange( 0, scrollWidth - clientWidth );
   }
 
-  function getNearestScrollable( dom ) {
-    return hasScrollY( dom ) || hasScrollX( dom ) ? dom : getParent( dom, ( dom ) => {
-      return hasScrollY( dom ) || hasScrollX( dom );
-    });
-  }
-
   return {
-    setScroll, resetCache, getNearestScrollable
+    setScroll, resetCache
   };
 };

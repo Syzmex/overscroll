@@ -4,7 +4,7 @@ import { set } from './utils/css';
 export default function( scope ) {
 
   const { target, axis, hasX, hasY, domData: { setData }, OVERSCROLL,
-    OVERSCROLLX, OVERSCROLLY, resetCache } = scope;
+    OVERSCROLLX, OVERSCROLLY, BUBBLE, NOBUBBLE, bubble, resetCache } = scope;
 
   // 添加样式
   set( target, 'overflow', 'hidden' );
@@ -19,6 +19,8 @@ export default function( scope ) {
   if ( hasY( axis )) {
     setData( target, OVERSCROLLY );
   }
+
+  setData( target, bubble ? BUBBLE : NOBUBBLE );
 
   // 初始化缓存
   resetCache();

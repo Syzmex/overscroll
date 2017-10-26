@@ -18,6 +18,8 @@ const yreg = /y/i;
 const OVERSCROLL = 'OverScroll';
 const OVERSCROLLX = 'OverScrollX';
 const OVERSCROLLY = 'OverScrollY';
+const BUBBLE = 'bubble';
+const NOBUBBLE = 'noBubble';
 
 function hasX( axis ) {
   return xreg.test( axis );
@@ -84,12 +86,15 @@ const defaultOptions = {
   onBeforeScroll: null,
   onAfterScroll: null,
   onDestroy: null,
-  getContainer: null,
-  isPageScroll: false,
+  // getContainer: null,
+  isPageScroll: false, // 判断是否是页面滚动
   mode: 'scroll', // 'section'
   anchors: null,
   switchScale: [ 0.2, 0.2 ], // [往上拉的距离比例，往下拉的距离比例]
-  position: [ 0, 0 ]
+  position: [ 0, 0 ],
+  bubble: true, // 让父级的滚动可以触发
+  dragable: true, // pointerType === 'mouse' 的开关
+  touchable: true // pointerType === 'touch' 的开关
 };
 
 function getOptions({
@@ -110,7 +115,10 @@ function getOptions({
   mode,
   anchors,
   switchScale,
-  position
+  position,
+  bubble,
+  dragable,
+  touchable
 } = {}) {
 
   const options = Object.assign({}, defaultOptions );
@@ -230,6 +238,21 @@ function getOptions({
     }
   }
 
+  // 设置当前滚动区间是否冒泡事件
+  if ( bubble === false ) {
+    options.bubble = bubble;
+  }
+
+  // 鼠标拖动开关
+  if ( dragable === false ) {
+    options.dragable = dragable;
+  }
+
+  // 触摸开关
+  if ( touchable === false ) {
+    options.touchable = touchable;
+  }
+
   return Object.assign( options, { body, html, doc, win });
 }
 
@@ -242,7 +265,7 @@ export default ( options ) => {
     scrollWidth: 0,
     clientHeight: 0,
     clientWidth: 0,
-    section: 0,
+    section: 1,
     scrolling: false
   };
 
@@ -258,6 +281,8 @@ export default ( options ) => {
     OVERSCROLL,
     OVERSCROLLX,
     OVERSCROLLY,
+    BUBBLE,
+    NOBUBBLE,
     overscroll
   };
 

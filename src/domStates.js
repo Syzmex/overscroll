@@ -2,7 +2,7 @@
 export default ( scope ) => {
 
   const { target, overscroll, domData: { setData, hasData, removeData },
-    hasScrollY, hasScrollX, getNearestScrollable, getParent } = scope;
+    hasScrollY, hasScrollX, getNearestScrollable, getParent, NOBUBBLE } = scope;
 
   function handleState( states ) {
     return function( target, state = '' ) {
@@ -92,16 +92,20 @@ export default ( scope ) => {
   function scrollable( dom, childrenState = { top: false, left: false, right: false, bottom: false }) {
     const scrollableDom = getNearestScrollable( dom );
     const state = scrollableTo( scrollableDom );
-    const newState = {
-      top: state.top && !childrenState.top,
-      left: state.left && !childrenState.left,
-      right: state.right && !childrenState.right,
-      bottom: state.bottom && !childrenState.bottom
-    };
     if ( target === scrollableDom ) {
-      return newState;
+      return {
+        top: state.top && !childrenState.top,
+        left: state.left && !childrenState.left,
+        right: state.right && !childrenState.right,
+        bottom: state.bottom && !childrenState.bottom
+      };
     }
-    return scrollable( getParent( scrollableDom ), newState );
+    return scrollable( getParent( scrollableDom ), {
+      top: hasData( scrollableDom, NOBUBBLE ) || state.top || childrenState.top,
+      left: hasData( scrollableDom, NOBUBBLE ) || state.left || childrenState.left,
+      right: hasData( scrollableDom, NOBUBBLE ) || state.right || childrenState.right,
+      bottom: hasData( scrollableDom, NOBUBBLE ) || state.bottom || childrenState.bottom
+    });
   }
 
   // 滚动状态设置完成后运行该函数

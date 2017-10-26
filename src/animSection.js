@@ -23,7 +23,7 @@ export default ( scope ) => {
   const { scrollX, scrollY, handleDestroy, overscroll, hasScrollY, hasScrollX,
     setScroll, target, switchScale, anchors, getPosition, resetCache, getScroll,
     scrollable, onScroll, onAfterScroll, onBeforeScroll, handleAfterScroll,
-    handleBeforeScroll, handleScroll, handleInit } = scope;
+    handleBeforeScroll, handleScroll, handleInit, dragable, touchable } = scope;
 
   // 横向排版 getPosition 有小数，所以加上范围限制保证在寻找缓存中的位置信息时能够精确找到
 
@@ -224,17 +224,27 @@ export default ( scope ) => {
       }
     };
 
-    handleDestroy( addEventListener( target, 'mousedown', scrollStop ).remove );
-    handleDestroy( addEventListener( target, 'touchstart', scrollStop ).remove );
-    handleDestroy( addEventListener( target, 'mouseup', scrollRestore ).remove );
-    handleDestroy( addEventListener( target, 'touchend', scrollRestore ).remove );
-    handleDestroy( addEventListener( target, 'touchcancel', scrollRestore ).remove );
+
+    if ( dragable ) {
+      handleDestroy( addEventListener( target, 'mousedown', scrollStop ).remove );
+      handleDestroy( addEventListener( target, 'mouseup', scrollRestore ).remove );
+    }
+
+    if ( touchable ) {
+      handleDestroy( addEventListener( target, 'touchstart', scrollStop ).remove );
+      handleDestroy( addEventListener( target, 'touchend', scrollRestore ).remove );
+      handleDestroy( addEventListener( target, 'touchcancel', scrollRestore ).remove );
+    }
+
     mc.add( new Hammer.Pan({ direction: Hammer.DIRECTION_ALL, threshold: 0 }));
     mc.on( 'panstart panmove panend', ( event ) => {
       event.preventDefault();
 
-      // 生产环境关闭鼠标拖动
-      if ( process.env.NODE_ENV === 'production' && event.pointerType === 'mouse' ) {
+      if ( !dragable && event.pointerType === 'mouse' ) {
+        return;
+      }
+
+      if ( !touchable && event.pointerType === 'touch' ) {
         return;
       }
 
@@ -331,15 +341,18 @@ export default ( scope ) => {
     overscroll.section = position();
   }
 
-  handleScroll( setSectionCache );
+  // handleScroll( setSectionCache );
   // handleBeforeScroll( setSectionCache );
   handleAfterScroll( setSectionCache );
 
   function initSections() {
+    // 设置 anchor 样式撑满容器
     anchors.forEach(( element ) => {
       set( element, 'height', '100%' );
       set( element, 'width', '100%' );
     });
+    // 重置容器信息
+    resetCache();
     if ( scrollX ) {
       possX = getXPoss();
     } else {
@@ -364,6 +377,12 @@ export default ( scope ) => {
           const curIndex = poss.indexOf( curpos ) + 1;
           const index = poss.filter(( pos ) => pos <= targetPos ).length;
 
+          if ( scrollX ) {
+            possX = poss;
+          } else {
+            possY = poss;
+          }
+
           if ( noAnimation === true ) {
             setScroll( scrollX ? poss[index - 1] : 0, scrollY ? poss[index - 1] : 0 );
           } else if ( curIndex !== index ) {
@@ -379,6 +398,12 @@ export default ( scope ) => {
           const curpos = scrollX ? scrollLeft : scrollTop;
           const d = scrollX ? clientWidth : clientHeight;
           const curIndex = poss.indexOf( curpos ) + 1;
+
+          if ( scrollX ) {
+            possX = poss;
+          } else {
+            possY = poss;
+          }
 
           if ( noAnimation === true ) {
             setScroll( scrollX ? poss[index - 1] : 0, scrollY ? poss[index - 1] : 0 );

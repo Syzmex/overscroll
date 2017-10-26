@@ -23,7 +23,7 @@ export default ( scope ) => {
   const { handleDestroy, overscroll, hasScrollY, target, html,
     onScroll, isPageScroll, resetCache, scrollable, isTop, isBottom, isLeft,
     isRight, getFromRange, hasScrollX, onBeforeScroll, onAfterScroll, scrollX,
-    scrollY, getScroll } = scope;
+    scrollY, getScroll, dragable, touchable } = scope;
 
   const xory = ( func ) => ( x, y ) => {
     if ( scrollX && scrollY ) {
@@ -263,8 +263,11 @@ export default ( scope ) => {
     manager.on( 'panstart panmove panend', ( event ) => {
       event.preventDefault();
 
-      // 生产环境关闭鼠标拖动
-      if ( process.env.NODE_ENV === 'production' && event.pointerType === 'mouse' ) {
+      if ( !dragable && event.pointerType === 'mouse' ) {
+        return;
+      }
+
+      if ( !touchable && event.pointerType === 'touch' ) {
         return;
       }
 
@@ -318,7 +321,11 @@ export default ( scope ) => {
       lastDeltaY = deltaY;
     });
     handleDestroy(() => manager.destroy());
-    handleDestroy( addEventListener( target, 'touchstart', scrollStop ).remove );
+
+    if ( touchable ) {
+      handleDestroy( addEventListener( target, 'touchstart', scrollStop ).remove );
+    }
+
   }
 
   return {

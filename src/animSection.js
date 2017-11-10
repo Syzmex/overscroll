@@ -10,7 +10,7 @@ function sign( number ) {
 
 const boundOut = ( t ) => Math.sin( Math.PI * t );
 const esseOut = ( t ) => {
-  return t < 0.5 ? 1.5 : Math.sin( Math.PI * t ) * 1.5 * 29 / 30 + 1 / 30;
+  return t < 0.5 ? 1.5 : Math.sin( Math.PI * t ) * 2.5 * 29 / 30 + 1 / 30;
 };
 const divisor = ( d, S ) => esseOut((( S - d ) / S ));
 const bound = ( d, S ) => boundOut((( S - d ) / S ));

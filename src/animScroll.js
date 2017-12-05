@@ -121,9 +121,9 @@ export default ( scope ) => {
 
       if ( vx !== 0 || vy !== 0 ) {
         setScroll( scrollLeft + vx, scrollTop + vy );
-        if ( dx !== 0 || dy !== 0 ) {
-          onScroll();
-        }
+        // if ( dx !== 0 || dy !== 0 ) {
+        onScroll();
+        // }
       }
 
       // 指定距离移动时：速度清空必须 setScroll 之后

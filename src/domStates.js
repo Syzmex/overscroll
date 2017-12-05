@@ -7,9 +7,9 @@ export default ( scope ) => {
   function handleState( states ) {
     return function( target, state = '' ) {
       if ( !hasData( target, state )) {
-        states.filter(
-          ( elemState ) => state !== elemState && hasData( target, elemState )
-        ).forEach(( state ) => removeData( target, state ));
+        states.filter(( elemState ) => {
+          return state !== elemState && hasData( target, elemState );
+        }).forEach(( state ) => removeData( target, state ));
         if ( state && states.includes( state )) {
           setData( target, state );
         }

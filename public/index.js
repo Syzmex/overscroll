@@ -3,7 +3,7 @@ import overscroll from '../src/index';
 // import getScrollBarSzie from '../src/utils/getScrollBarSize';
 overscroll({
   position: 2,
-  mode: 'section',
+  // mode: 'section',
   target: window.root,
   onBeforeScroll: ( e ) => {
     console.log('onBeforeScroll', e.section )

@@ -333,9 +333,12 @@ export default ( scope ) => {
       resetCache( scope );
       const anim = runAnimFrame();
       runMouseAction( anim );
-      runHammer( anim );
+      if ( dragable || touchable ) {
+        runHammer( anim );
+      }
       return {
         scrollTo( positionX, positionY, noAnimation ) {
+          resetCache( scope );
           if ( noAnimation === true ) {
             setScroll( positionX, positionY );
             return;

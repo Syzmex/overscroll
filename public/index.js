@@ -4,6 +4,7 @@ import overscroll from '../src/index';
 overscroll({
   position: 2,
   // mode: 'section',
+  // dragable: false,
   target: window.root,
   onBeforeScroll: ( e ) => {
     console.log('onBeforeScroll', e.section )
@@ -20,6 +21,8 @@ overscroll({
 });
 overscroll({
   // axis: 'x',
+  dragable: false,
+  touchable: false,
   target: window.scrolltest,
   // onBeforeScroll: ( e ) => {
   //   console.log('onBeforeScroll' )

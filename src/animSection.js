@@ -365,7 +365,9 @@ export default ( scope ) => {
     run() {
       initSections();
       const anim = runAnimFrame();
-      runHammer( anim );
+      if ( dragable || touchable ) {
+        runHammer( anim );
+      }
       return {
         position: () => position( true ),
         scrollTo( targetPos, noAnimation ) {

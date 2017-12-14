@@ -70,6 +70,7 @@ export default ( scope ) => {
           // 向下/向上
           if (( isBottom() && vy > 0 ) || ( isTop() && vy < 0 )) {
             vy = 0;
+            dy = 0;
           }
           if ( timePointY === 1 ) {
             dy = 0;
@@ -86,6 +87,7 @@ export default ( scope ) => {
           // 向右/向左
           if (( isRight() && vx > 0 ) || ( isLeft() && vx < 0 )) {
             vx = 0;
+            dx = 0;
           }
           if ( timePointX === 1 ) {
             dx = 0;

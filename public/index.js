@@ -22,7 +22,7 @@ overscroll({
 overscroll({
   // axis: 'x',
   dragable: false,
-  touchable: false,
+  // touchable: false,
   target: window.scrolltest,
   // onBeforeScroll: ( e ) => {
   //   console.log('onBeforeScroll' )

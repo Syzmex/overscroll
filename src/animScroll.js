@@ -122,7 +122,27 @@ export default ( scope ) => {
       }
 
       if ( vx !== 0 || vy !== 0 ) {
-        setScroll( scrollLeft + vx, scrollTop + vy );
+
+        let nextX = scrollLeft + vx;
+        let nextY = scrollTop + vy;
+        // if ( overscroll.scrollHeight === overscroll.clientHeight ) {
+        //   nextY = 0;
+        //   dy = 0;
+        //   vy = 0;
+        //   ody = 0;
+        //   posY = 0;
+        //   timePointY = 0;
+        // }
+        // if ( overscroll.scrollWidth === overscroll.clientWidth ) {
+        //   nextX = 0;
+        //   dx = 0;
+        //   vx = 0;
+        //   odx = 0;
+        //   posX = 0;
+        //   timePointX = 0;
+        // }
+        setScroll( nextX, nextY );
+        // setScroll( scrollLeft + vx, scrollTop + vy );
         // if ( dx !== 0 || dy !== 0 ) {
         onScroll();
         // }

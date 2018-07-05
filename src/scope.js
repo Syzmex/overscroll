@@ -30,7 +30,7 @@ function hasY( axis ) {
 }
 
 function hasXY( axis ) {
-  return hasX( axis ) && hasY( axis );
+  return axis === 'xy' || axis === 'yx';
 }
 
 function getAxis( axis = XY ) {
@@ -47,12 +47,14 @@ const getScrollByAxis = ({ target, axis, win, html, body, isPageScroll }) => () 
   // CSS1Compat 标准模式 BackCompat 混杂模式
   // const isCSS1Compat = doc.compatMode === 'CSS1Compat';
   const scrollX = () => {
-    return !isPageScroll ? target.scrollLeft : is.Defined( win.pageXOffset ) ? win.pageXOffset
-      : Math.max( html.scrollLeft, body.scrollLeft );
+    return !isPageScroll ?
+      target.scrollLeft : is.Defined( win.pageXOffset ) ?
+      win.pageXOffset : Math.max( html.scrollLeft, body.scrollLeft );
   };
   const scrollY = () => {
-    return !isPageScroll ? target.scrollTop : is.Defined( win.pageYOffset ) ? win.pageYOffset
-      : Math.max( html.scrollTop, body.scrollTop );
+    return !isPageScroll ?
+      target.scrollTop : is.Defined( win.pageYOffset ) ?
+      win.pageYOffset : Math.max( html.scrollTop, body.scrollTop );
   };
   if ( hasXY( axis )) {
     return {
@@ -74,7 +76,7 @@ const getScrollByAxis = ({ target, axis, win, html, body, isPageScroll }) => () 
 const defaultOptions = {
   axis: XY,
   prefix: OVERSCROLL,
-  thumbMiniSize: 20,
+  // thumbMiniSize: 20,
   // show: true,
   // showX: true,
   // showY: true,
@@ -97,7 +99,7 @@ const defaultOptions = {
   touchable: true // pointerType === 'touch' 的开关
 };
 
-function getOptions({
+function getScope({
   axis,
   prefix,
   // show,
@@ -201,7 +203,7 @@ function getOptions({
 
   if ( is.Function( watch )) {
     options.watch = watch;
-    if ( is.Number( watchInterval ) && watchInterval > 50 ) {
+    if ( is.Number( watchInterval ) && watchInterval > 1000 / 30 ) {
       options.watchInterval = watchInterval;
     }
   }
@@ -286,7 +288,7 @@ export default ( options ) => {
     overscroll
   };
 
-  Object.assign( scope, getOptions( options ));
+  Object.assign( scope, getScope( options ));
   Object.assign( scope, domUtils( scope ), {
     getScroll: getScrollByAxis( scope ),
     handleDestroy: handleDestroy( scope ),

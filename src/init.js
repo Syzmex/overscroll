@@ -9,6 +9,9 @@ export default function( scope ) {
   // 添加样式
   set( target, 'overflow', 'hidden' );
 
+  // 冒泡标记
+  setData( target, bubble ? BUBBLE : NOBUBBLE );
+
   // DOM 打上标记
   setData( target, OVERSCROLL );
 
@@ -19,8 +22,6 @@ export default function( scope ) {
   if ( hasY( axis )) {
     setData( target, OVERSCROLLY );
   }
-
-  setData( target, bubble ? BUBBLE : NOBUBBLE );
 
   // 初始化缓存
   resetCache();

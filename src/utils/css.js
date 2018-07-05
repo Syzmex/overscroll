@@ -1,5 +1,7 @@
 
 import is from 'whatitis';
+import getDocument from './dom/getDocument';
+import getWindow from './dom/getWindow';
 
 
 const PIXEL_PATTERN = /margin|padding|width|height|max|min|offset/;
@@ -15,8 +17,7 @@ const floatMap = {
 };
 
 function getComputedStyle( node ) {
-  return node.nodeType === 1 ?
-    node.ownerDocument.defaultView.getComputedStyle( node, null ) : {};
+  return getWindow( node ).getComputedStyle( node, null );
 }
 
 function getStyleValue( node, type, value ) {
@@ -59,10 +60,5 @@ export function set( node, name, value ) {
       set( node, key, value );
     });
   }
-  // for ( const x in name ) {
-  //   if ( name.hasOwnProperty( x )) {
-  //     set( node, x, name[x]);
-  //   }
-  // }
   return getComputedStyle( node );
 }

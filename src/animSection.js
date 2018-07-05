@@ -2,7 +2,7 @@
 import Hammer from 'hammerjs';
 import { set } from './utils/css';
 import addEventListener from './utils/dom/addDomEventListener';
-import { requestAnimFrame } from './utils/requestAnimationFrame';
+import { requestAnimFrame } from './utils/requestAnimFrame';
 
 function sign( number ) {
   return number > 0 ? 1 : -1;

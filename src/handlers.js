@@ -8,29 +8,27 @@ export function handler( name ) {
   return function( scope ) {
     const { mode } = scope;
     const wrap = function( func ) {
-      return function() {
-        func.call( scope.target, pick( scope.overscroll, [
-          'scrollTop',
-          'scrollLeft',
-          'scrollHeight',
-          'scrollWidth',
-          'clientHeight',
-          'clientWidth'
-        ].concat( mode === 'scroll' ? [] : [ 'section', 'positions' ])));
-      };
+      func.call( scope.target, pick( scope.overscroll, [
+        'scrollTop',
+        'scrollLeft',
+        'scrollHeight',
+        'scrollWidth',
+        'clientHeight',
+        'clientWidth'
+      ].concat( mode === 'scroll' ? [] : [ 'section', 'positions' ])));
     };
     scope.handleCache = scope.handleCache || {};
     scope.handleCache[name] = noop;
     const initialHandler = scope[name] ? scope[name] : noop;
     scope[name] = function() {
       scope.handleCache[name]();
-      wrap( initialHandler )();
+      wrap( initialHandler );
     };
-    return compose(( callback ) => {
+    return ( callback ) => {
       scope.handleCache[name] = scope.handleCache[name] !== noop
-        ? compose( callback, scope.handleCache[name])
-        : callback;
-    }, wrap );
+        ? compose( wrap( callback ), scope.handleCache[name])
+        : wrap( callback );
+    };
   };
 }
 

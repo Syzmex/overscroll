@@ -1,5 +1,4 @@
 
-// import camelCase from '../camelCase';
 import hyphenate from '../hyphenate';
 
 function firstCharToLowerCase( str ) {

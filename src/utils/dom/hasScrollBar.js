@@ -2,8 +2,6 @@
 import { get } from '../css';
 import { hasData } from './domData';
 
-// 实际情况下 body documentElement 不会都设置 overflow: scroll
-// 推荐 html, body { height: 100% } body { overflow: auto; }
 
 function compose( funcA, funcB ) {
   return function( ...args ) {
@@ -18,16 +16,20 @@ const scrollable = ( attr ) => ( dom ) => {
 export default ({ body, html, target, OVERSCROLLX, OVERSCROLLY }) => {
 
   function hasScrollX( dom ) {
+    // 页面滚动时必须用 html 计算, body 不设置 height 的情况下可能有
+    // dom.scrollHeight === dom.clientHeight 页面也可以滚动
     return dom.scrollWidth > dom.clientWidth &&
-      ( hasData( dom, OVERSCROLLX ) || scrollable( 'overflow-x' )( dom ));
+      ( hasData( target, OVERSCROLLX ) || scrollable( 'overflow-x' )( target ));
   }
 
   function hasScrollY( dom ) {
+    // 同上
     return dom.scrollHeight > dom.clientHeight &&
-      ( hasData( dom, OVERSCROLLY ) || scrollable( 'overflow-y' )( dom ));
+      ( hasData( target, OVERSCROLLY ) || scrollable( 'overflow-y' )( target ));
   }
 
-  function scrollingElement( dom = target ) {
+  // 页面滚动情况下之后的计算必须要用 html, 如果获取到的是 body 就要替换成 html
+  function scrollElement( dom = target ) {
     return dom === body ? html : dom;
   }
 
@@ -39,8 +41,8 @@ export default ({ body, html, target, OVERSCROLLX, OVERSCROLLY }) => {
   }
 
   return {
-    hasScroll: compose( hasScroll, scrollingElement ),
-    hasScrollX: compose( hasScrollX, scrollingElement ),
-    hasScrollY: compose( hasScrollY, scrollingElement )
+    hasScroll: compose( hasScroll, scrollElement ),
+    hasScrollX: compose( hasScrollX, scrollElement ),
+    hasScrollY: compose( hasScrollY, scrollElement )
   };
 };
